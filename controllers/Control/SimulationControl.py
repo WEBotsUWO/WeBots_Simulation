@@ -1,28 +1,35 @@
+from math import sqrt
+import sys, os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Now explicitly append the PYTHONPATH
+sys.path.append(os.getenv('PYTHONPATH'))
 from controller import Supervisor
+import random
 
-# This is a secondary controller to control the simulation
-class SimControl:
-    def __init__(self):
-        # Create supervisor
-        try:
-            self.__world = Supervisor()
-        except TypeError:
-            raise Exception("World not loaded")
+TIME_STEP = 16
 
-        # Setting the position to the middle
-        try:
-            self.__robot_node = self.__world.getFromDef("WEBOT")
-        except TypeError:
-            raise Exception("Robot node not found")
+supervisor = Supervisor()
 
-        # get the time step of the current world.
-        self.__timestep = int(self.__world.getBasicTimeStep())
+# get handle to robot's translation field
+robot_node = supervisor.getFromDef("SUPER")
+trans_field = robot_node.getField("translation")
+rot_field = robot_node.getField("rotation")
 
-    # Returns timestamp
-    def getTimestep(self):
-       return self.__timestep
+#while supervisor.step(TIME_STEP) != -1:
 
-    # Sets the position of the robot
-    def setRobotPosition(self, position):
-        position_field = self.__robot_node.getField("translation")
-        position_field.setSFVec3f(position)
+    #may     compute travelled distance
+    #need   values = trans_field.getSFVec3f()
+    #later  dist = sqrt(values[0] * values[0] + values[2] * values[2])
+            #print("a=%d, b=%d -> dist=%g" % (a, b, dist))
+
+        # set the cubes position
+rndx = random.uniform(-5, 5)
+rndy = random.uniform(-5, 5)
+POS = [rndx, rndy, 0]
+trans_field.setSFVec3f(POS)
+rot = random.uniform(0, 6.28319)
+angle = [0, 0, 1, rot]
+rot_field.setSFRotation(angle)

@@ -7,7 +7,13 @@ import random
 import time
 from abc import ABC
 from typing import Optional
+import sys
+from dotenv import load_dotenv
 
+load_dotenv()
+
+# Now explicitly append the PYTHONPATH
+sys.path.append(os.getenv('PYTHONPATH'))
 import cv2
 import gym
 import numpy as np
