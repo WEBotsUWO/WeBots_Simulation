@@ -1,4 +1,4 @@
-#VRML_SIM R2023a utf8
+#VRML_SIM R2025a utf8
 
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2023a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
@@ -14,8 +14,8 @@ WorldInfo {
   basicTimeStep 16
 }
 Viewpoint {
-  orientation -0.0721443641002138 -0.09896241662655145 0.9924724836608865 4.6574536572400405
-  position 0.2300099420455889 10.464279266240563 1.9014269199965184
+  orientation -0.08623661420180687 -0.08397039684688992 0.9927296806403969 4.655077779597529
+  position 0.29915740209276354 6.581478233143895 1.395353398011786
   follow "ROBOTIS OP3"
 }
 TexturedBackground {
@@ -72,7 +72,7 @@ DEF WEBOT Robot {
   translation -1.1963555202812795e-05 -0.00039906852094842744 0.2781678161505854
   rotation 0.0008972762183343495 -0.00135317930853063 0.9999986818997049 1.5707268529686342
   children [
-    DEF boxs Transform {
+    DEF boxs Pose {
       translation 0 -0.95 -0.04
       children [
         CUBE {
@@ -138,20 +138,20 @@ DEF WEBOT Robot {
       color []
       gradual TRUE
     }
-    Group {
-    }
     Solid {
       translation 0 0.01 0
       children [
+        GPS {
+        }
         Group {
           children [
-            Transform {
+            Pose {
               translation -8.06404e-14 0.035 0.002
               rotation -0.5773496025226482 -0.5773496025226482 0.5773516025212713 2.0944
               children [
                 Group {
                   children [
-                    Transform {
+                    Pose {
                       translation 0 0.0001 0.028
                       rotation 1 0 0 -1.5708
                       children [
@@ -226,13 +226,13 @@ DEF WEBOT Robot {
                 }
               ]
             }
-            Transform {
+            Pose {
               translation -1.17786e-15 -0.035 0.002
               rotation -0.5773496025226482 -0.5773496025226482 0.5773516025212713 2.0944
               children [
                 Group {
                   children [
-                    Transform {
+                    Pose {
                       translation 0 0.0001 0.028
                       rotation 1 0 0 -1.5708
                       children [
@@ -432,10 +432,10 @@ DEF WEBOT Robot {
             }
           ]
           endPoint Solid {
-            translation 1.2986991496192854e-06 0.034998999998895615 2.880000000000069e-05
-            rotation -0.9496021762489669 0.16744171765610918 0.26498863758961033 4.377594954248001e-06
+            translation 1.2986991496192892e-06 0.034998999998895615 2.880000000000077e-05
+            rotation -0.9496020308384687 0.16744169201612621 0.26498917487745194 4.376884775101995e-06
             children [
-              Transform {
+              Pose {
                 translation 0 0 0.002
                 rotation -1 0 0 1.5708
                 children [
@@ -678,7 +678,7 @@ DEF WEBOT Robot {
                   }
                 ]
               }
-              Transform {
+              Pose {
                 translation -0.026 0 -0.028
                 rotation 0 0 1 -1.5708
                 children [
@@ -843,7 +843,7 @@ DEF WEBOT Robot {
                   }
                 ]
               }
-              Transform {
+              Pose {
                 translation -0.017 0 -0.028
                 rotation 0 0 1 1.5708
                 children [
@@ -1000,7 +1000,7 @@ DEF WEBOT Robot {
                   }
                 ]
               }
-              Transform {
+              Pose {
                 translation -0.019 0 -0.028
                 rotation 0 0 1 1.5708
                 children [
@@ -1073,16 +1073,16 @@ DEF WEBOT Robot {
                   }
                 ]
                 endPoint Solid {
-                  translation -0.024 -2.384245956733665e-06 -0.02844119999861959
-                  rotation 0.985056847180056 0.17050785205451344 -0.02429156667331103 1.2717597659440177e-06
+                  translation -0.024 -2.384245956733667e-06 -0.02844119999861959
+                  rotation 0.98505684588353 0.17050785939579063 -0.024291567719193247 1.2717597659440177e-06
                   children [
-                    Transform {
+                    Pose {
                       translation 0.024 0.017 0
                       rotation 0 1 0 3.1415
                       children [
                         Group {
                           children [
-                            Transform {
+                            Pose {
                               translation 0 0.0001 0.028
                               rotation 1 0 0 -1.5708
                               children [
@@ -1157,13 +1157,13 @@ DEF WEBOT Robot {
                         }
                       ]
                     }
-                    Transform {
+                    Pose {
                       translation -0.002 0 0
                       rotation 0.7071052808049648 0.7071082808061562 -3.275811300887014e-05 3.14153
                       children [
                         Group {
                           children [
-                            Transform {
+                            Pose {
                               translation 0 0.0001 0.028
                               rotation 1 0 0 -1.5708
                               children [
@@ -1287,7 +1287,7 @@ DEF WEBOT Robot {
                         translation 0.0241 0.019 0
                         rotation 0 1 0 6.222907608098144e-07
                         children [
-                          Transform {
+                          Pose {
                             translation 0 -0.002 0
                             children [
                               Group {
@@ -1602,7 +1602,7 @@ DEF WEBOT Robot {
                               }
                             ]
                           }
-                          Transform {
+                          Pose {
                             translation 0 -0.019 -0.056
                             rotation -0.5773496025226482 0.5773496025226482 -0.5773516025212713 2.0944
                             children [
@@ -1638,7 +1638,7 @@ DEF WEBOT Robot {
                               }
                             ]
                           }
-                          Transform {
+                          Pose {
                             translation 0 -0.019 -0.056
                             rotation 0.5773496025226482 0.5773496025226482 0.5773516025212713 2.0944
                             children [
@@ -1700,12 +1700,12 @@ DEF WEBOT Robot {
                               }
                             ]
                           }
-                          Transform {
+                          Pose {
                             translation 0 -0.002 -0.11
                             children [
                               Group {
                                 children [
-                                  Transform {
+                                  Pose {
                                     translation 0 0.0001 0.028
                                     rotation 1 0 0 -1.5708
                                     children [
@@ -1803,7 +1803,7 @@ DEF WEBOT Robot {
                               translation 0 0 -0.11015
                               rotation 0 1 0 6.314998895054215e-07
                               children [
-                                Transform {
+                                Pose {
                                   translation 0 -0.002 0
                                   children [
                                     Group {
@@ -2118,7 +2118,7 @@ DEF WEBOT Robot {
                                     }
                                   ]
                                 }
-                                Transform {
+                                Pose {
                                   translation 0 -0.019 -0.055
                                   rotation 0.5773502691896258 0.5773502691896258 0.5773502691896258 2.09434
                                   children [
@@ -2154,7 +2154,7 @@ DEF WEBOT Robot {
                                     }
                                   ]
                                 }
-                                Transform {
+                                Pose {
                                   translation 0 -0.019 -0.055
                                   rotation -0.5773516025212714 -0.5773496025226483 0.5773496025226483 2.0944
                                   children [
@@ -2190,7 +2190,7 @@ DEF WEBOT Robot {
                                     }
                                   ]
                                 }
-                                Transform {
+                                Pose {
                                   translation 0 -0.002 -0.11
                                   children [
                                     Group {
@@ -2528,12 +2528,12 @@ DEF WEBOT Robot {
                                     translation 0 0 -0.11
                                     rotation 0 1 0 8.118056340143877e-07
                                     children [
-                                      Transform {
+                                      Pose {
                                         translation 0 -0.002 0
                                         children [
                                           Group {
                                             children [
-                                              Transform {
+                                              Pose {
                                                 translation 0 0.0001 0.028
                                                 rotation 1 0 0 -1.5708
                                                 children [
@@ -2608,7 +2608,7 @@ DEF WEBOT Robot {
                                           }
                                         ]
                                       }
-                                      Transform {
+                                      Pose {
                                         translation -0.024 -0.019 0
                                         rotation 1 0 0 3.1415
                                         children [
@@ -2640,13 +2640,13 @@ DEF WEBOT Robot {
                                           }
                                         ]
                                       }
-                                      Transform {
+                                      Pose {
                                         translation -0.0265 -0.019 0
                                         rotation 0 0 1 -1.5708
                                         children [
                                           Group {
                                             children [
-                                              Transform {
+                                              Pose {
                                                 translation 0 0.0001 0.028
                                                 rotation 1 0 0 -1.5708
                                                 children [
@@ -2745,7 +2745,7 @@ DEF WEBOT Robot {
                                           children [
                                             Group {
                                             }
-                                            Transform {
+                                            Pose {
                                               translation -0.002 0 0
                                               rotation 0 0 1 -1.5708
                                               children [
@@ -2910,7 +2910,7 @@ DEF WEBOT Robot {
                                                 }
                                               ]
                                             }
-                                            Transform {
+                                            Pose {
                                               translation 0.007 0 0
                                               rotation 0 0 1 1.5708
                                               children [
@@ -3067,7 +3067,7 @@ DEF WEBOT Robot {
                                                 }
                                               ]
                                             }
-                                            Transform {
+                                            Pose {
                                               translation 0.005 0 0
                                               rotation 0 0 1 1.5708
                                               children [
@@ -3094,7 +3094,7 @@ DEF WEBOT Robot {
                                                 }
                                               ]
                                             }
-                                            Transform {
+                                            Pose {
                                               translation 0.021 0 -0.029
                                               rotation 0 1 0 3.1415
                                               children [
@@ -3126,7 +3126,7 @@ DEF WEBOT Robot {
                                                 }
                                               ]
                                             }
-                                            Transform {
+                                            Pose {
                                               translation 0.02402 0.01251 -0.0305
                                               children [
                                                 Shape {
@@ -3160,7 +3160,7 @@ DEF WEBOT Robot {
                                           ]
                                           name "FootLSolid"
                                           contactMaterial "ROBOTIS OP3 foot material"
-                                          boundingObject Transform {
+                                          boundingObject Pose {
                                             translation 0.024 0.0125 -0.0265
                                             children [
                                               Box {
@@ -3184,7 +3184,7 @@ DEF WEBOT Robot {
                                     ]
                                     name "AnkleLSolid"
                                     contactMaterial "ROBOTIS OP3 default material"
-                                    boundingObject Transform {
+                                    boundingObject Pose {
                                       translation -0.0206 -0.0168 0.012
                                       children [
                                         Box {
@@ -3208,7 +3208,7 @@ DEF WEBOT Robot {
                               ]
                               name "LegLowerLSolid"
                               contactMaterial "ROBOTIS OP3 default material"
-                              boundingObject Transform {
+                              boundingObject Pose {
                                 translation 0 -0.02 -0.055
                                 children [
                                   Box {
@@ -3232,7 +3232,7 @@ DEF WEBOT Robot {
                         ]
                         name "LegUpperLSolid"
                         contactMaterial "ROBOTIS OP3 default material"
-                        boundingObject Transform {
+                        boundingObject Pose {
                           translation 0.000425 -0.0188 -0.05945
                           children [
                             Box {
@@ -3256,7 +3256,7 @@ DEF WEBOT Robot {
                   ]
                   name "PelvLSolid"
                   contactMaterial "ROBOTIS OP3 default material"
-                  boundingObject Transform {
+                  boundingObject Pose {
                     translation 0.003875 0.0022 -0.012
                     children [
                       Box {
@@ -3280,7 +3280,7 @@ DEF WEBOT Robot {
             ]
             name "PelvYLSolid"
             contactMaterial "ROBOTIS OP3 default material"
-            boundingObject Transform {
+            boundingObject Pose {
               translation -0.0015 0 -0.0155
               children [
                 Box {
@@ -3321,10 +3321,10 @@ DEF WEBOT Robot {
             }
           ]
           endPoint Solid {
-            translation 1.12107999999999e-08 -0.035000000000002196 1.6248700000000063e-05
-            rotation -0.9262956185357779 0.12311484193918905 0.35611678249656953 1.1846188851804782e-06
+            translation 1.121079999999993e-08 -0.035000000000002196 1.6248700000000063e-05
+            rotation -0.9262237577822429 0.12310529085729235 0.35630694335457824 1.1834937126436873e-06
             children [
-              Transform {
+              Pose {
                 translation 0 -4.89665e-14 0.002
                 rotation 1 0 0 -1.5708
                 children [
@@ -3567,7 +3567,7 @@ DEF WEBOT Robot {
                   }
                 ]
               }
-              Transform {
+              Pose {
                 translation -0.026 0 -0.028
                 rotation 0 0 1 -1.5708
                 children [
@@ -3732,7 +3732,7 @@ DEF WEBOT Robot {
                   }
                 ]
               }
-              Transform {
+              Pose {
                 translation -0.017 0 -0.028
                 rotation 0 0 1 1.5708
                 children [
@@ -3889,7 +3889,7 @@ DEF WEBOT Robot {
                   }
                 ]
               }
-              Transform {
+              Pose {
                 translation -0.019 0 -0.028
                 rotation 0 0 1 1.5708
                 children [
@@ -3962,16 +3962,16 @@ DEF WEBOT Robot {
                   }
                 ]
                 endPoint Solid {
-                  translation -0.024 3.146629999957008e-15 -0.0285
+                  translation -0.024 3.146629999955524e-15 -0.0285
                   rotation -1 0 0 3.964941112890867e-07
                   children [
-                    Transform {
+                    Pose {
                       translation 0.024 -0.017 0
                       rotation 1 0 0 3.1415
                       children [
                         Group {
                           children [
-                            Transform {
+                            Pose {
                               translation 0 0.0001 0.028
                               rotation 1 0 0 -1.5708
                               children [
@@ -4046,13 +4046,13 @@ DEF WEBOT Robot {
                         }
                       ]
                     }
-                    Transform {
+                    Pose {
                       translation -0.002 0 0
                       rotation 0.7071052808049648 0.7071082808061562 -3.275811300887014e-05 3.14153
                       children [
                         Group {
                           children [
-                            Transform {
+                            Pose {
                               translation 0 0.0001 0.028
                               rotation 1 0 0 -1.5708
                               children [
@@ -4176,7 +4176,7 @@ DEF WEBOT Robot {
                         translation 0.0241 -0.019 0
                         rotation 0 1 0 7.027283979983126e-07
                         children [
-                          Transform {
+                          Pose {
                             translation 0 0.002 0
                             rotation 0 0 1 3.1415
                             children [
@@ -4492,7 +4492,7 @@ DEF WEBOT Robot {
                               }
                             ]
                           }
-                          Transform {
+                          Pose {
                             translation 0 0.019 -0.056
                             rotation -0.5773496025226482 0.5773496025226482 -0.5773516025212713 2.0944
                             children [
@@ -4528,7 +4528,7 @@ DEF WEBOT Robot {
                               }
                             ]
                           }
-                          Transform {
+                          Pose {
                             translation 0 0.019 -0.056
                             rotation 0.5773496025226482 0.5773496025226482 0.5773516025212713 2.0944
                             children [
@@ -4590,13 +4590,13 @@ DEF WEBOT Robot {
                               }
                             ]
                           }
-                          Transform {
+                          Pose {
                             translation 0 0.002 -0.11
                             rotation 0 0 1 3.1415
                             children [
                               Group {
                                 children [
-                                  Transform {
+                                  Pose {
                                     translation 0 0.0001 0.028
                                     rotation 1 0 0 -1.5708
                                     children [
@@ -4694,7 +4694,7 @@ DEF WEBOT Robot {
                               translation 0 0 -0.11015
                               rotation 0 1 0 6.643979790689961e-07
                               children [
-                                Transform {
+                                Pose {
                                   translation 0 0.002 0
                                   rotation 0 0 1 3.1415
                                   children [
@@ -5010,7 +5010,7 @@ DEF WEBOT Robot {
                                     }
                                   ]
                                 }
-                                Transform {
+                                Pose {
                                   translation 0 0.019 -0.055
                                   rotation -0.5773496025226482 0.5773496025226482 -0.5773516025212713 2.0944
                                   children [
@@ -5046,7 +5046,7 @@ DEF WEBOT Robot {
                                     }
                                   ]
                                 }
-                                Transform {
+                                Pose {
                                   translation 0 0.019 -0.055
                                   rotation 0.5773516025212714 -0.5773496025226483 -0.5773496025226483 2.0944
                                   children [
@@ -5082,7 +5082,7 @@ DEF WEBOT Robot {
                                     }
                                   ]
                                 }
-                                Transform {
+                                Pose {
                                   translation 0 0.002 -0.11
                                   rotation 0 0 1 3.1415
                                   children [
@@ -5421,13 +5421,13 @@ DEF WEBOT Robot {
                                     translation 0 0 -0.11
                                     rotation 0 1 0 3.5638394186202926e-07
                                     children [
-                                      Transform {
+                                      Pose {
                                         translation 0 0.002 0
                                         rotation 0 0 1 3.1415
                                         children [
                                           Group {
                                             children [
-                                              Transform {
+                                              Pose {
                                                 translation 0 0.0001 0.028
                                                 rotation 1 0 0 -1.5708
                                                 children [
@@ -5502,7 +5502,7 @@ DEF WEBOT Robot {
                                           }
                                         ]
                                       }
-                                      Transform {
+                                      Pose {
                                         translation -0.024 0.019 0
                                         rotation 0 1 0 3.1415
                                         children [
@@ -5534,13 +5534,13 @@ DEF WEBOT Robot {
                                           }
                                         ]
                                       }
-                                      Transform {
+                                      Pose {
                                         translation -0.0265 0.019 0
                                         rotation 0 0 1 -1.5708
                                         children [
                                           Group {
                                             children [
-                                              Transform {
+                                              Pose {
                                                 translation 0 0.0001 0.028
                                                 rotation 1 0 0 -1.5708
                                                 children [
@@ -5639,7 +5639,7 @@ DEF WEBOT Robot {
                                           children [
                                             Group {
                                             }
-                                            Transform {
+                                            Pose {
                                               translation -0.002 0 0
                                               rotation 0 0 1 -1.5708
                                               children [
@@ -5804,7 +5804,7 @@ DEF WEBOT Robot {
                                                 }
                                               ]
                                             }
-                                            Transform {
+                                            Pose {
                                               translation 0.007 0 0
                                               rotation 0 0 1 1.5708
                                               children [
@@ -5961,7 +5961,7 @@ DEF WEBOT Robot {
                                                 }
                                               ]
                                             }
-                                            Transform {
+                                            Pose {
                                               translation 0.005 0 0
                                               rotation 0 0 1 1.5708
                                               children [
@@ -5988,7 +5988,7 @@ DEF WEBOT Robot {
                                                 }
                                               ]
                                             }
-                                            Transform {
+                                            Pose {
                                               translation 0.021 0 -0.029
                                               rotation 0 1 0 3.1415
                                               children [
@@ -6020,7 +6020,7 @@ DEF WEBOT Robot {
                                                 }
                                               ]
                                             }
-                                            Transform {
+                                            Pose {
                                               translation 0.02402 -0.01251 -0.0305
                                               children [
                                                 Shape {
@@ -6054,7 +6054,7 @@ DEF WEBOT Robot {
                                           ]
                                           name "FootRSolid"
                                           contactMaterial "ROBOTIS OP3 foot material"
-                                          boundingObject Transform {
+                                          boundingObject Pose {
                                             translation 0.024 -0.0125 -0.0265
                                             children [
                                               Box {
@@ -6078,7 +6078,7 @@ DEF WEBOT Robot {
                                     ]
                                     name "AnkleRSolid"
                                     contactMaterial "ROBOTIS OP3 default material"
-                                    boundingObject Transform {
+                                    boundingObject Pose {
                                       translation -0.020225 0.0168 0.012
                                       children [
                                         Box {
@@ -6102,7 +6102,7 @@ DEF WEBOT Robot {
                               ]
                               name "LegLowerRSolid"
                               contactMaterial "ROBOTIS OP3 default material"
-                              boundingObject Transform {
+                              boundingObject Pose {
                                 translation 0 0.02 -0.055
                                 children [
                                   Box {
@@ -6126,7 +6126,7 @@ DEF WEBOT Robot {
                         ]
                         name "LegUpperRSolid"
                         contactMaterial "ROBOTIS OP3 default material"
-                        boundingObject Transform {
+                        boundingObject Pose {
                           translation 0.000425 0.0188 -0.05945
                           children [
                             Box {
@@ -6150,7 +6150,7 @@ DEF WEBOT Robot {
                   ]
                   name "PelvRSolid"
                   contactMaterial "ROBOTIS OP3 default material"
-                  boundingObject Transform {
+                  boundingObject Pose {
                     translation 0.003875 -0.0022 -0.012
                     children [
                       Box {
@@ -6174,7 +6174,7 @@ DEF WEBOT Robot {
             ]
             name "PelvYRSolid"
             contactMaterial "ROBOTIS OP3 default material"
-            boundingObject Transform {
+            boundingObject Pose {
               translation -0.0015 0 -0.0155
               children [
                 Box {
@@ -6219,7 +6219,7 @@ DEF WEBOT Robot {
             children [
               Group {
                 children [
-                  Transform {
+                  Pose {
                     translation 0 0 -0.0025
                     rotation 1 0 0 1.5708
                     children [
@@ -6462,7 +6462,7 @@ DEF WEBOT Robot {
                       }
                     ]
                   }
-                  Transform {
+                  Pose {
                     translation 0.01 0.017 0.029
                     children [
                       Group {
@@ -6840,12 +6840,12 @@ DEF WEBOT Robot {
                     }
                     Group {
                       children [
-                        Transform {
+                        Pose {
                           translation 0 -0.0023 0
                           children [
                             Group {
                               children [
-                                Transform {
+                                Pose {
                                   translation 0 0.0001 0.028
                                   rotation 1 0 0 -1.5708
                                   children [
@@ -7105,7 +7105,7 @@ DEF WEBOT Robot {
                   ]
                   name "HeadSolid"
                   contactMaterial "ROBOTIS OP3 default material"
-                  boundingObject Transform {
+                  boundingObject Pose {
                     translation 0.006 -0.019 0.02775
                     children [
                       Box {
@@ -7129,7 +7129,7 @@ DEF WEBOT Robot {
             ]
             name "NeckSolid"
             contactMaterial "ROBOTIS OP3 default material"
-            boundingObject Transform {
+            boundingObject Pose {
               translation 0.00375 0 0.0155
               children [
                 Box {
@@ -7155,7 +7155,7 @@ DEF WEBOT Robot {
       contactMaterial "ROBOTIS OP3 default material"
       boundingObject Group {
         children [
-          Transform {
+          Pose {
             translation -0.01675 0.052 0.08
             children [
               Box {
@@ -7163,7 +7163,7 @@ DEF WEBOT Robot {
               }
             ]
           }
-          Transform {
+          Pose {
             translation -0.01675 -0.052 0.08
             children [
               Box {
@@ -7171,7 +7171,7 @@ DEF WEBOT Robot {
               }
             ]
           }
-          Transform {
+          Pose {
             translation -0.01675 0 0.06825
             children [
               Box {

@@ -105,7 +105,7 @@ class CustomEnv(gym.Env, ABC):
         # For falling and collisions
         self.cancel_sim = False
         self.accel_threshold = 9.81*2 # Currently 2g
-        self.height_threshold = 0.75 # Check this val
+        self.height_threshold = 0.15 # Check this val
 
         # Motor constraints (Maybe change)
         self.begin_motor_pos = 0.0 
@@ -123,6 +123,7 @@ class CustomEnv(gym.Env, ABC):
             shape=(self.motor_num,),
             dtype=np.float64
         )
+        
 
         # Camera constraints
         self.cam_fidelity = 512
@@ -158,13 +159,19 @@ class CustomEnv(gym.Env, ABC):
             shape=(3,),
             dtype=np.float64
         )
+        self.gps_space = spaces.Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(3,),
+            dtype=np.float64)
 
         # The full observation space containing all sensors
         self.observation_space = spaces.Tuple((
             self.cam_space,
             self.mot_space,
             self.gyro_space,
-            self.accel_space
+            self.accel_space,
+            self.gps_space,
         ))
 
         # Setting a buffer to hold old states and the current state
@@ -193,14 +200,21 @@ class CustomEnv(gym.Env, ABC):
         motor_devices_name = ["PelvR", "PelvYR", "LegUpperR", "PelvL", "PelvYL", "LegUpperL", "LegLowerR", "LegLowerL",
                               "AnkleR", "FootR", "AnkleL", "FootL"]
         self.motor_devices = []
-        # TODO I haven't been using this. Change to position sensor
-        self.motor_positions = []
+        self.joint_sensors = []
+        
+        
 
         # initialize devices
         for i, name in enumerate(motor_devices_name):
             self.motor_devices.append(self.robot.getDevice(name))
             self.motor_devices[i].setPosition(self.begin_motor_pos)
-            self.motor_positions.append(self.begin_motor_pos)
+            
+        #Initialize sensors
+        for mot in self.motor_devices:
+            sensor = mot.getPositionSensor()
+            sensor.enable(self.timestep)
+            self.joint_sensors.append(sensor)
+
         deg2rad = np.deg2rad
 
         # Capture robot’s *current* pose
@@ -249,8 +263,14 @@ class CustomEnv(gym.Env, ABC):
         # Setting the gyro and accel
         self.gyro = self.robot.getDevice("Gyro")
         self.gyro.enable(self.timestep)
+        self.dt = self.timestep / 1000.0        # ms → s
+        self.orientation = np.zeros(3)          # roll, pitch, yaw  (rad)
+
         self.accel = self.robot.getDevice("Accelerometer")
         self.accel.enable(self.timestep)
+
+        self.gps = self.robot.getDevice("GPS")   
+        self.gps.enable(self.timestep) 
 
         # Setting the random objects to avoid
         self.play_radius = 100
@@ -278,7 +298,7 @@ class CustomEnv(gym.Env, ABC):
         # Resetting motors
         for i in range(len(self.motor_devices)):
             self.motor_devices[i].setPosition(self.begin_motor_pos)
-            self.motor_positions[i] = self.begin_motor_pos
+            #self.joint_sensors[i] = self.begin_motor_pos
 
         # Resetting the camera
         self.cam.disable()
@@ -382,22 +402,29 @@ class CustomEnv(gym.Env, ABC):
 
     # This calculates the reward from the action
     def rewardCalc(self):
-        # Getting closer to the target
-        cur_pos = self.robot_node.getPosition()
-        dist = math.sqrt(((cur_pos[0]-self.target[0])**2) + ((cur_pos[1]-self.target[1])**2))
+        """Compute task reward, fall flag, and collision flag."""
 
-        # How close to a step it is. Outputs a 1 or 0 (sigmoid)
-        # TODO might have to change activation to softmax
-        is_step = self.critic.predict(self.criticDataPrep())
+        # ── 1. Distance-to-target term (use GPS X-Y) ────────────────────────────
+        cur_xy     = np.array(self.position[:2], dtype=np.float32)    # [x, y] from GPS
+        target_xy  = np.array(self.target,      dtype=np.float32)     # [x, y]
+        dist       = np.linalg.norm(cur_xy - target_xy) + 1e-6        # ε avoids div-by-zero
 
-        # Any collisions
+        # reward grows as we get closer
+        dist_rwd = self.target_reward * (1.0 / dist)
+
+        # ── 2. Walking-gait term from the critic ───────────────────────────────
+        is_step  = float(self.critic.predict(self.criticDataPrep())[0])  # scalar 0-1
+        gait_rwd = self.walking_reward * is_step
+
+        # ── 3. Collision & fall penalties ──────────────────────────────────────
         collision = anyOverlap(self.objects_pos, self.position, self.max_obj_size)
+        fallen    = self.fellOver()
 
-        # Fell over
-        fallen = self.fellOver()
+        coll_pen  = self.collision_reward * float(collision)
+        fall_pen  = self.falling_reward   * float(fallen)
 
-        # Total reward
-        reward = (self.target_reward*(1/dist))+(self.walking_reward*is_step)+(self.collision_reward*collision)+(self.falling_reward*fallen)
+        # ── 4. Sum components ──────────────────────────────────────────────────
+        reward = dist_rwd + gait_rwd + coll_pen + fall_pen
 
         return reward, fallen, collision
 
@@ -407,10 +434,16 @@ class CustomEnv(gym.Env, ABC):
         for mot, tgt in zip(self.motor_devices, action):
             mot.setPosition(tgt)        # Webots will move at the per-joint vmax
         self.robot.step(self.timestep)
+
+        omega = np.array(self.gyro.getValues())          # rad/s
+        self.orientation += omega * self.dt              # θ_new = θ_old + ω·dt
         time.sleep(self.step_pause)
 
+        joint_angles = [s.getValue() for s in self.joint_sensors]
+
         # Reset robot position
-        self.position = self.robot_node.getField("translation").value
+        self.position = self.gps.getValues()
+        #self.position = self.robot_node.getField("translation").value
 
     # This gets an image from the camera
     def convertImage(self, raw_image):
@@ -425,7 +458,9 @@ class CustomEnv(gym.Env, ABC):
 
     # This takes an observation of the environment
     def observe(self):
-        observation = (self.image,
+        image = self.convertImage(self.cam.getImage())
+        joint_angles = [s.getValue() for s in self.joint_sensors]
+        observation = (image,
                        self.getMotorPos(),
                        self.gyro.getValues(),
                        self.accel.getValues)
@@ -434,16 +469,15 @@ class CustomEnv(gym.Env, ABC):
 
     # This function checks if the robot fell
     def fellOver(self) -> bool:
-        # Height too low
-        if self.robot_node.getPosition()[2] <= self.height_threshold:
-            print("Height threshold broken")
+        z_pos = self.position[2]                 # self.position is GPS [x, y, z]
+        if z_pos <= self.height_threshold:
+            print(f"Height threshold broken: z = {z_pos:.3f} m")
             return True
-
-        # Acceleration too much in any direction
-        accel_values = np.array(self.accel.getValues())
-        accel_magnitude = np.linalg.norm(accel_values)
+ 
+        accel_values     = np.array(self.accel.getValues())   # m/s²
+        accel_magnitude  = np.linalg.norm(accel_values)
         if accel_magnitude >= self.accel_threshold:
-            print("Acceleration threshold broken")
+            print(f"Acceleration threshold broken: |a| = {accel_magnitude:.2f} m/s²")
             return True
 
         return False
@@ -463,17 +497,22 @@ class CustomEnv(gym.Env, ABC):
 
     # Preps the data to be passed into the critic
     def criticDataPrep(self):
-        # Grab motor positions
-        mot_obs = np.zeros((self.obs_num, self.motor_num))
-        for i, obs in enumerate(self.buffer):
-            mot_obs[i] = obs[1]
+       """Return a (1, obs_num, motor_num) array ready for self.critic.predict()."""
 
-        # Normalize the data
-        tmp = np.reshape(mot_obs, (self.obs_num * self.motor_num))
-        tmp_norm = norm(tmp)
-        mot_obs = mot_obs / tmp_norm
+       # stack the last `obs_num` motor-position rows from the buffer
+       mot_obs = np.zeros((self.obs_num, self.motor_num), dtype=np.float32)
+       for i, obs in enumerate(self.buffer):
+           mot_obs[i] = obs[1]                         # obs[1] = motor angles
 
-        return mot_obs
+       # normalise (L2) – add ε to avoid div-by-zero
+       flat      = mot_obs.reshape(-1)
+       denom     = np.linalg.norm(flat) + 1e-8
+       mot_obs   = mot_obs / denom
+
+       # add batch axis so shape becomes (1, 4, 12)
+       mot_obs = np.expand_dims(mot_obs, axis=0)
+
+       return mot_obs
 
     # The changes reference to the robot. Can't have two references (node or robot)
     def switchRobotReference(self):
