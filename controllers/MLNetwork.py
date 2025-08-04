@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 from keras import layers
-import gym
+import gymnasium  as gym
 
 
 # This is the model class that inherits from model

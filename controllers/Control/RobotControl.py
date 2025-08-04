@@ -12,13 +12,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Now explicitly append the PYTHONPATH
+
 sys.path.append(os.getenv('PYTHONPATH'))
 import cv2
-import gym
+import gymnasium as gym
 import numpy as np
-from gym import spaces
-from gym.core import ActType
+from gymnasium import spaces
+from gymnasium.core import ActType
+import tensorflow as tf
 from tensorflow import keras
 from controller import Robot, Camera
 #from SimulationControl import SimControl
@@ -71,10 +72,27 @@ class CustomEnv(gym.Env, ABC):
         self.collision_reward = -10.0
         self.falling_reward = -10.0
 
+        JOINT_LIMITS = {
+            #  name        window°   vmax°/s   tmax Nm
+            "PelvR"   :  ( 35,       180,      6.0 ),
+            "PelvYR"  :  ( 45,        90,      4.0 ),
+            "LegUpperR": (120,       120,      8.0 ),
+            "PelvL"   :  ( 35,       180,      6.0 ),
+            "PelvYL"  :  ( 45,        90,      4.0 ),
+            "LegUpperL": (120,       120,      8.0 ),
+            "LegLowerR": ( 90,       160,      5.0 ),
+            "LegLowerL": ( 90,       160,      5.0 ),
+            "AnkleR"  :  ( 45,       200,      3.0 ),
+            "FootR"   :  ( 25,       200,      2.5 ),
+            "AnkleL"  :  ( 45,       200,      3.0 ),
+            "FootL"   :  ( 25,       200,      2.5 ),
+        }
+
         # Load the walking critic model
         parent_dir = os.path.dirname(os.path.abspath(__file__))
-        critic_path = os.path.join(parent_dir, '..', 'Critic.h5')
+        critic_path = os.path.join(parent_dir, 'Critic.keras')
         self.critic = keras.models.load_model(critic_path)
+
 
         # Starting position of the robot
         self.start_pos = [0.0, 0.0, 0.285]
@@ -90,7 +108,7 @@ class CustomEnv(gym.Env, ABC):
         self.height_threshold = 0.75 # Check this val
 
         # Motor constraints (Maybe change)
-        self.begin_motor_pos = 0.0
+        self.begin_motor_pos = 0.0 
         self.motor_max_pos_rad = np.pi
         self.motor_min_pos_rad = -np.pi
         self.motor_max_pos_deg = 359.99
@@ -103,7 +121,7 @@ class CustomEnv(gym.Env, ABC):
             low=self.motor_min_pos_deg,
             high=self.motor_max_pos_deg,
             shape=(self.motor_num,),
-            dtype=np.float32
+            dtype=np.float64
         )
 
         # Camera constraints
@@ -126,7 +144,7 @@ class CustomEnv(gym.Env, ABC):
             low=self.gyro_min,
             high=self.gyro_max,
             shape=(3,),
-            dtype=np.float32
+            dtype=np.float64
         )
 
         # Accel constraints. See if this is right
@@ -138,7 +156,7 @@ class CustomEnv(gym.Env, ABC):
             low=self.accel_min,
             high=self.accel_max,
             shape=(3,),
-            dtype=np.float32
+            dtype=np.float64
         )
 
         # The full observation space containing all sensors
@@ -157,7 +175,7 @@ class CustomEnv(gym.Env, ABC):
                 low=self.motor_min_pos_rad,
                 high=self.motor_max_pos_rad,
                 shape=(self.motor_num,),
-                dtype=np.float32)
+                dtype=np.float64)
 
         # Init accel, gyro, global pos, target pos, camera, and dist
         self.position = self.start_pos
@@ -183,12 +201,50 @@ class CustomEnv(gym.Env, ABC):
             self.motor_devices.append(self.robot.getDevice(name))
             self.motor_devices[i].setPosition(self.begin_motor_pos)
             self.motor_positions.append(self.begin_motor_pos)
+        deg2rad = np.deg2rad
+
+        # Capture robot’s *current* pose
+        start_rad = np.array([m.getTargetPosition() for m in self.motor_devices],
+                             dtype=np.float64)
+
+        # Make per-joint arrays
+        window   = deg2rad([JOINT_LIMITS[m.getName()][0] for m in self.motor_devices])
+        vmax_rad = deg2rad([JOINT_LIMITS[m.getName()][1] for m in self.motor_devices])
+        tmax_nm  = np.array([JOINT_LIMITS[m.getName()][2] for m in self.motor_devices],
+                            dtype=np.float64)
+
+        soft_min = start_rad - window
+        soft_max = start_rad + window
+
+        # never exceed Webots hard limits
+        hard_min = np.array([m.getMinPosition() for m in self.motor_devices])
+        hard_max = np.array([m.getMaxPosition() for m in self.motor_devices])
+        soft_min = np.maximum(soft_min, hard_min)
+        soft_max = np.minimum(soft_max, hard_max)
+
+        # Configure each motor once
+        for m, v_lim, t_lim in zip(self.motor_devices, vmax_rad, tmax_nm):
+            m.setPosition(float('inf'))   # velocity-control mode
+            m.setVelocity(v_lim)          # per-joint speed cap
+            m.setTorque(t_lim)            # per-joint torque cap
+
+        # Update Gym action_space (position targets)
+        self.action_space = spaces.Box(low=soft_min,
+                                       high=soft_max,
+                                       dtype=np.float64)
+
+    
+        self._soft_min = soft_min
+        self._soft_max = soft_max
 
         # Setting the camera
         self.cam = self.robot.getDevice("Camera")
         self.cam.enable(self.timestep)
-        self.rawImage = self.cam.getImage
-        self.image = self.convertImage()
+
+        self.robot.step(self.timestep)      
+
+        raw = self.cam.getImage()           
+        self.image = self.convertImage(raw)
 
         # Setting the gyro and accel
         self.gyro = self.robot.getDevice("Gyro")
@@ -347,11 +403,9 @@ class CustomEnv(gym.Env, ABC):
 
     # This function executes the desired action. Sets motor positions.
     def takeAction(self, action: ActType):
-        # Move the motors to their new positions
-        for i, mot in enumerate(self.motor_devices):
-            mot.setPosition(action[i])
-
-        # Step the simulation
+        action = np.clip(action, self._soft_min, self._soft_max)
+        for mot, tgt in zip(self.motor_devices, action):
+            mot.setPosition(tgt)        # Webots will move at the per-joint vmax
         self.robot.step(self.timestep)
         time.sleep(self.step_pause)
 
@@ -359,20 +413,15 @@ class CustomEnv(gym.Env, ABC):
         self.position = self.robot_node.getField("translation").value
 
     # This gets an image from the camera
-    def convertImage(self):
-        camera_data = np.empty(shape=(self.cam_fidelity, self.cam_fidelity), dtype='float')
-        # Convert image to gray
-        for r in range(self.cam_fidelity):
-            for c in range(self.cam_fidelity):
-                camera_data[r, c] = Camera.imageGetGray(self.rawImage, self.cam_fidelity, r, c)
+    def convertImage(self, raw_image):
+        w, h = self.cam.getWidth(), self.cam.getHeight()    
+        gray = np.empty((h, w), dtype=np.float64)
 
-        # Rescale pixel values to be between 0 and 1
-        camera_data = camera_data.astype(np.float32) / 255.0
+        for y in range(h):
+            for x in range(w):
+                gray[y, x] = Camera.imageGetGray(raw_image, w, x, y) / 255.0
 
-        # Add a channel dimension
-        camera_data = np.expand_dims(camera_data, axis=2)
-
-        return camera_data
+        return gray[..., None]    # (H, W, 1)
 
     # This takes an observation of the environment
     def observe(self):
