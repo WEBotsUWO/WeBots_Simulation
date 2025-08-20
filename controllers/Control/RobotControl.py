@@ -21,7 +21,7 @@ from gymnasium import spaces
 from gymnasium.core import ActType
 import tensorflow as tf
 from tensorflow import keras
-from controller import Robot, Camera
+from controller import Robot, Camera, Supervisor, GPS
 #from SimulationControl import SimControl
 os.environ["WEBOTS_CONTROLLER_URL"] = "ipc://1234/WEBOT"
 
@@ -88,10 +88,36 @@ class CustomEnv(gym.Env, ABC):
             "FootL"   :  ( 25,       200,      2.5 ),
         }
 
-        # Load the walking critic model
-        parent_dir = os.path.dirname(os.path.abspath(__file__))
+        try:
+            self.robot = Supervisor() 
+            self.robot = self.robot.created
+            self.timestep = int(self.robot.basic_time_step)
+        except TypeError:
+            raise Exception("Robot not loaded")
+        
+        parent_dir  = os.path.dirname(os.path.abspath(__file__))
         critic_path = os.path.join(parent_dir, 'Critic.keras')
-        self.critic = keras.models.load_model(critic_path)
+
+        self.critic = None
+        try:
+            print(f"[CustomEnv] Loading critic: {critic_path}")
+            assert os.path.exists(critic_path), f"Critic file not found at {critic_path}"
+            self.critic = keras.models.load_model(critic_path)
+        except Exception as e:
+            print(f"[CustomEnv] WARNING: critic unavailable ({e}). Using 0.0 for is_step.")
+
+
+   
+        parent   = self.robot.getFromDef("boxs")
+        children = parent.getField("children")
+        self.cubes = [children.getMFNode(i) for i in range(children.getCount())]  # CUBE protos or Solids
+        self.cube_z0 = [n.getField("translation").getSFVec3f()[2] for n in self.cubes]
+
+        # per-cube XY velocity [m/s] and yaw rate [rad/s]
+        rng = np.random.default_rng(0)
+        self.cube_vel = [rng.uniform(-0.3, 0.3, size=2).astype(float) for _ in self.cubes]
+        self.cube_wz  = [float(rng.uniform(-0.8, 0.8)) for _ in self.cubes]
+        
 
 
         # Starting position of the robot
@@ -189,12 +215,7 @@ class CustomEnv(gym.Env, ABC):
         #self.sim = SimControl()
        # self.sim.setRobotPosition(self.position)
 
-        try:
-            self.robot = Robot()
-            self.robot = self.robot.created
-            self.timestep = int(self.robot.basic_time_step)
-        except TypeError:
-            raise Exception("Robot not loaded")
+
 
         # Setting the devices
         motor_devices_name = ["PelvR", "PelvYR", "LegUpperR", "PelvL", "PelvYL", "LegUpperL", "LegLowerR", "LegLowerL",
@@ -269,7 +290,7 @@ class CustomEnv(gym.Env, ABC):
         self.accel = self.robot.getDevice("Accelerometer")
         self.accel.enable(self.timestep)
 
-        self.gps = self.robot.getDevice("GPS")   
+        self.gps = self.robot.getDevice("gps")   
         self.gps.enable(self.timestep) 
 
         # Setting the random objects to avoid
@@ -311,19 +332,26 @@ class CustomEnv(gym.Env, ABC):
         self.accel.enable(self.timestep)
 
         # Resetting map and target
-        for obj in self.objects:
-            obj.remove()
-
-        self.objects = self.placeObjects(self.num_objects, self.play_radius, self.max_obj_size)
+        if getattr(self, "objects", None):
+            for node in list(self.objects):
+                try:
+                    node.remove()
+                except Exception:
+                    pass
+                
+        # re-spawn and UNPACK the tuple that placeObjects returns
+        self.objects, self.objects_pos = self.placeObjects(
+            self.num_objects, self.play_radius, self.max_obj_size
+        )
         self.target = (random.uniform(-1, 1) * self.play_radius, random.uniform(-1, 1) * self.play_radius)
 
-        # Take an observation and return it
-        obs = self.observe()
-        for i in range(self.obs_num):
-            self.buffer.append(obs)
-
-        # TODO Check if this is the right thing to return
-        return self.buffer
+        self.buffer.clear()
+        o = self.observe()
+        for _ in range(self.obs_num):
+            self.buffer.append(o)
+        obs  = self._stack_obs()
+        info = {}
+        return obs, info
 
     # This randomly places objects
     # TODO I don't think this will work yet
@@ -381,8 +409,13 @@ class CustomEnv(gym.Env, ABC):
         # Take the next observation and add to buffer
         self.buffer.append(self.observe())
 
-        # TODO Check if this is the right return type
-        return np.array(self.buffer), reward, done
+        terminated = bool(fallen or collision)
+        truncated  = bool(self.cur_step >= self.max_step)
+
+        obs  = self._stack_obs()
+        info = {}
+
+        return obs, reward, terminated, truncated, info
 
     # This determines if the simulation needs to be reset
     def isDone(self, fallen, collision) -> bool:
@@ -413,7 +446,11 @@ class CustomEnv(gym.Env, ABC):
         dist_rwd = self.target_reward * (1.0 / dist)
 
         # ── 2. Walking-gait term from the critic ───────────────────────────────
-        is_step  = float(self.critic.predict(self.criticDataPrep())[0])  # scalar 0-1
+        if self.critic is None:
+            is_step = 0.0
+        else:
+            pred = self.critic.predict(self.criticDataPrep(), verbose=0)
+            is_step = float(np.squeeze(pred))   # robust to shapes like (1,1) or (1,)
         gait_rwd = self.walking_reward * is_step
 
         # ── 3. Collision & fall penalties ──────────────────────────────────────
@@ -427,6 +464,10 @@ class CustomEnv(gym.Env, ABC):
         reward = dist_rwd + gait_rwd + coll_pen + fall_pen
 
         return reward, fallen, collision
+    
+    def set_cube_velocity(self, i, vx, vy, wz=0.0):
+        self.cube_vel[i] = np.array([vx, vy], float)
+        self.cube_wz[i]  = float(wz)
 
     # This function executes the desired action. Sets motor positions.
     def takeAction(self, action: ActType):
@@ -434,6 +475,22 @@ class CustomEnv(gym.Env, ABC):
         for mot, tgt in zip(self.motor_devices, action):
             mot.setPosition(tgt)        # Webots will move at the per-joint vmax
         self.robot.step(self.timestep)
+        for i, (n, z0) in enumerate(zip(self.cubes, self.cube_z0)):
+            vx, vy = self.cube_vel[i]
+            wz     = self.cube_wz[i]
+
+            # translate on the plane
+            tf = n.getField("translation")
+            x, y, z = tf.getSFVec3f()
+            tf.setSFVec3f([x + vx * self.dt, y + vy * self.dt, z0])
+
+            # rotate about Z
+            rf = n.getField("rotation")
+            axis_angle = rf.getSFRotation()
+            ang = axis_angle[3]
+            rf.setSFRotation([0, 0, 1, ang + wz * self.dt])
+
+            n.resetPhysics()   
 
         omega = np.array(self.gyro.getValues())          # rad/s
         self.orientation += omega * self.dt              # θ_new = θ_old + ω·dt
@@ -456,16 +513,42 @@ class CustomEnv(gym.Env, ABC):
 
         return gray[..., None]    # (H, W, 1)
 
+    def _clamp_cube_planar(self, node, z0):
+        # lock Z translation on the node itself
+        t_f = node.getField("translation")
+        t   = list(t_f.getSFVec3f()); t[2] = z0
+        t_f.setSFVec3f(t)
+
+        # keep only yaw (about world Z) on the node itself
+        R   = np.array(node.getOrientation()).reshape(3, 3)   # world rotation
+        yaw = math.atan2(R[1, 0], R[0, 0])
+        node.getField("rotation").setSFRotation([0, 0, 1, yaw])
+
+        # if this node is (or wraps) a Solid, zero forbidden velocities & flush momentum
+        try:
+            v = list(node.getVelocity())                      # [vx, vy, vz, wx, wy, wz]
+            v[2] = 0.0; v[3] = 0.0; v[4] = 0.0
+            node.setVelocity(v)
+            node.resetPhysics()
+        except Exception:
+            pass  # some PROTOs won’t expose Solid methods; rotation/translation still locked
+
+    def _stack_obs(self):
+        imgs   = np.stack([o[0] for o in self.buffer], axis=0)  # (N,H,W,1)
+        joints = np.stack([o[1] for o in self.buffer], axis=0)  # (N,12)
+        gyros  = np.stack([o[2] for o in self.buffer], axis=0)  # (N,3)
+        accels = np.stack([o[3] for o in self.buffer], axis=0)  # (N,3)
+        gpss   = np.stack([o[4] for o in self.buffer], axis=0)  # (N,3)
+        return (imgs, joints, gyros, accels, gpss)
+
     # This takes an observation of the environment
     def observe(self):
-        image = self.convertImage(self.cam.getImage())
-        joint_angles = [s.getValue() for s in self.joint_sensors]
-        observation = (image,
-                       self.getMotorPos(),
-                       self.gyro.getValues(),
-                       self.accel.getValues)
-
-        return observation
+        image  = self.convertImage(self.cam.getImage())
+        joints = np.array([s.getValue() for s in self.joint_sensors], dtype=np.float64)
+        gyro   = np.array(self.gyro.getValues(),  dtype=np.float64)
+        accel  = np.array(self.accel.getValues(), dtype=np.float64)
+        gps    = np.array(self.gps.getValues(),   dtype=np.float64)
+        return (image, joints, gyro, accel, gps)
 
     # This function checks if the robot fell
     def fellOver(self) -> bool:

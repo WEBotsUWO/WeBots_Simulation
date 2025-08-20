@@ -14,8 +14,8 @@ WorldInfo {
   basicTimeStep 16
 }
 Viewpoint {
-  orientation -0.08623661420180687 -0.08397039684688992 0.9927296806403969 4.655077779597529
-  position 0.29915740209276354 6.581478233143895 1.395353398011786
+  orientation -0.11079757951071328 -0.10625919442576057 0.9881461835045235 4.640414044246474
+  position 0.34323653296937784 5.7266946181100185 1.7116168585636422
   follow "ROBOTIS OP3"
 }
 TexturedBackground {
@@ -72,44 +72,7 @@ DEF WEBOT Robot {
   translation -1.1963555202812795e-05 -0.00039906852094842744 0.2781678161505854
   rotation 0.0008972762183343495 -0.00135317930853063 0.9999986818997049 1.5707268529686342
   children [
-    DEF boxs Pose {
-      translation 0 -0.95 -0.04
-      children [
-        CUBE {
-          translation 1.76 2.04 0
-          name "box(1)"
-          size 0.5 0.5 0.5
-        }
-        CUBE {
-          translation -2.77 -0.33 0
-          name "box(2)"
-          size 0.5 0.5 0.5
-        }
-        CUBE {
-          translation -0.15 1.95 0
-          name "box(3)"
-          size 0.5 0.5 0.5
-        }
-        CUBE {
-          translation -0.11 -1.72 0
-          name "box(4)"
-          size 0.5 0.5 0.5
-        }
-        CUBE {
-          translation 1.76 -0.1 0
-          name "box(5)"
-          size 0.5 0.5 0.5
-        }
-        CUBE {
-          translation 1.76 -1.89 0
-          name "box(6)"
-          size 0.5 0.5 0.5
-        }
-        CUBE {
-          translation 4.56 -0.33 0
-          size 0.5 0.5 0.5
-        }
-      ]
+    GPS {
     }
     Accelerometer {
       name "Accelerometer"
@@ -141,8 +104,6 @@ DEF WEBOT Robot {
     Solid {
       translation 0 0.01 0
       children [
-        GPS {
-        }
         Group {
           children [
             Pose {
@@ -432,8 +393,8 @@ DEF WEBOT Robot {
             }
           ]
           endPoint Solid {
-            translation 1.2986991496192892e-06 0.034998999998895615 2.880000000000077e-05
-            rotation -0.9496020308384687 0.16744169201612621 0.26498917487745194 4.376884775101995e-06
+            translation 1.298699149619983e-06 0.034998999998895615 2.880000000000094e-05
+            rotation -0.9496017087526375 0.16744163522328592 0.2649903649716776 4.3753625744873e-06
             children [
               Pose {
                 translation 0 0 0.002
@@ -1073,8 +1034,8 @@ DEF WEBOT Robot {
                   }
                 ]
                 endPoint Solid {
-                  translation -0.024 -2.384245956733667e-06 -0.02844119999861959
-                  rotation 0.98505684588353 0.17050785939579063 -0.024291567719193247 1.2717597659440177e-06
+                  translation -0.024 -2.3842459567335816e-06 -0.02844119999861959
+                  rotation 0.9850568458807034 0.17050785941179777 -0.024291567721473707 1.2717597659440177e-06
                   children [
                     Pose {
                       translation 0.024 0.017 0
@@ -3321,8 +3282,8 @@ DEF WEBOT Robot {
             }
           ]
           endPoint Solid {
-            translation 1.121079999999993e-08 -0.035000000000002196 1.6248700000000063e-05
-            rotation -0.9262237577822429 0.12310529085729235 0.35630694335457824 1.1834937126436873e-06
+            translation 1.1210799999859413e-08 -0.035000000000002196 1.6248700000000057e-05
+            rotation -0.9262540289752174 0.12310931423067724 0.3562268526610954 1.1834937126436873e-06
             children [
               Pose {
                 translation 0 -4.89665e-14 0.002
@@ -3962,7 +3923,7 @@ DEF WEBOT Robot {
                   }
                 ]
                 endPoint Solid {
-                  translation -0.024 3.146629999955524e-15 -0.0285
+                  translation -0.024 3.1464315017889147e-15 -0.0285
                   rotation -1 0 0 3.964941112890867e-07
                   children [
                     Pose {
@@ -7206,4 +7167,43 @@ DEF WEBOT Robot {
     "--mode=fast"
   ]
   supervisor TRUE
+}
+DEF boxs Pose {
+  translation 0 -0.95 0.25
+  children [
+    CUBE {
+      translation 1.76 2.04 0
+      name "box(1)"
+      size 0.5 0.5 0.5
+    }
+    CUBE {
+      translation -2.77 -0.33 0
+      name "box(2)"
+      size 0.5 0.5 0.5
+    }
+    CUBE {
+      translation -0.15 1.95 0
+      name "box(3)"
+      size 0.5 0.5 0.5
+    }
+    CUBE {
+      translation -0.11 -1.72 0
+      name "box(4)"
+      size 0.5 0.5 0.5
+    }
+    CUBE {
+      translation 1.76 -0.1 0
+      name "box(5)"
+      size 0.5 0.5 0.5
+    }
+    CUBE {
+      translation 1.76 -1.89 0
+      name "box(6)"
+      size 0.5 0.5 0.5
+    }
+    CUBE {
+      translation 4.56 -0.33 0
+      size 0.5 0.5 0.5
+    }
+  ]
 }
