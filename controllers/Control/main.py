@@ -1,28 +1,22 @@
 
-import signal, sys, time
-import gymnasium as gym
-from  RobotControl import CustomEnv          
+import signal
+import sys
+from SingleInstanceEvolution import start_single_instance_evolution
 
-signal.signal(signal.SIGINT, lambda *_: sys.exit(0))
+# =============================================================================
+# MAIN EXECUTION MODULE
+# =============================================================================
 
 def main():
-    env = CustomEnv()
-    obs, info = env.reset()
-
-    episode_reward = 0.0                         
-    for t in range(1_000):
-        action = env.action_space.sample()
-        obs, reward, terminated, truncated, info = env.step(action)
-        episode_reward += reward
-
-        if terminated or truncated:
-            print(f"Episode finished after {t} steps ; reward={episode_reward:.3f}")
-            obs, info = env.reset()
-            episode_reward = 0.0                
-
-        time.sleep(0.01)         
-
-    env.close()
+    """Initialize and start the evolutionary training process"""
+    try:
+        start_single_instance_evolution()
+    except KeyboardInterrupt:
+        print("\nTraining terminated by user")
+    except Exception as e:
+        print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 
