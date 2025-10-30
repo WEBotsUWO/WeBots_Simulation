@@ -30,7 +30,6 @@ from tensorflow import keras
 from controller import Robot, Camera, Supervisor, GPS
 os.environ["WEBOTS_CONTROLLER_URL"] = "ipc://1234/WEBOT"
 
-
 # =============================================================================
 # UTILITY FUNCTIONS
 # =============================================================================
@@ -109,8 +108,8 @@ class CustomEnv(gym.Env, ABC):
             self.robot = Supervisor() 
             self.robot = self.robot.created
             # Use smaller timestep for smoother simulation (e.g., 8ms instead of default)
-            self.timestep = 8  # milliseconds
-            
+            self.timestep = int(self.robot.getBasicTimeStep())  # milliseconds
+            # print(f"[DEBUG] self.robot is a {type(self.robot)}")
             # Set simulation to fastest mode (no speed limit)
             self.robot.simulationSetMode(self.robot.SIMULATION_MODE_FAST)
             
@@ -1367,4 +1366,3 @@ class CustomEnv(gym.Env, ABC):
 
         else:
             print("Error switching robot references")
-

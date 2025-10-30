@@ -12,6 +12,7 @@ import tensorflow as tf
 import signal
 import sys
 import random
+from checkpoint import ensure_data_dirs, try_load_latest, save_population_checkpoint, save_champion_model
 
 # =============================================================================
 # NEURAL NETWORK MODEL DEFINITION
@@ -89,6 +90,16 @@ class ModelPopulation:
             self.optimizers.append(optimizer)
             self.fitness_scores.append(0.0)
         
+        self.models_dir, self.checkpoint_dir = ensure_data_dirs()
+
+        loaded_gen = try_load_latest(self.models, self.checkpoint_dir)
+        if loaded_gen >= 0:
+             self.generations = loaded_gen
+             print(f"[Checkpoint] Resumed from generation {self.generations}")
+        else:
+             self.generations = 0
+             print("[Checkpoint] No previous checkpoint found. Starting fresh.")
+
         print(f"Population initialized: {population_size} models with {self.models[0].count_params():,} parameters each")
     
     def get_current_model(self, model_index):
@@ -110,7 +121,17 @@ class ModelPopulation:
         
         print(f"Generation {self.generations}: Best model {best_idx} with fitness {best_fitness:.2f}")
         
-        self._save_best_model(best_idx, best_fitness)
+        save_champion_model(
+            self.models[best_idx],
+            self.models_dir,
+            self.generations,
+            best_idx,
+            best_fitness,
+            extra_metadata={
+                "population_size": self.population_size,
+                "mutation_rate": self.mutation_rate
+            }
+        )
         
         new_models = []
         new_optimizers = []
@@ -208,7 +229,7 @@ class SingleInstanceEvolutionTrainer:
         from RobotControl import CustomEnv
         self.env = CustomEnv(instance_id="evolution_trainer")
         self.env.enable_continuous_learning()
-        
+
         obs, info = self.env.reset()
         print(f"Environment initialized and reset complete")
         print(f"Observation shape: images={obs[0].shape}, joints={obs[1].shape}")

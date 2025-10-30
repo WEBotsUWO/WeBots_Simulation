@@ -11,7 +11,7 @@ WorldInfo {
     "The ROBOTIS OP3 robot simulation model can be programmed using the ROBOTIS OP3 motions files."
   ]
   title "ROBOTIS OP3"
-  basicTimeStep 16
+  basicTimeStep 8
 }
 Viewpoint {
   orientation -0.11079757951071328 -0.10625919442576057 0.9881461835045235 4.640414044246474

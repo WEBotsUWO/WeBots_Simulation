@@ -91,7 +91,7 @@ def main():
     gym.envs.register(id=env_name, entry_point='Control.RobotControl:CustomEnv')
     env = gym.make(env_name)
 
-    robot = agent()
+    MLAgent = agent()
     training_steps = 500  # Might look at changing this value
 
     for step in range(training_steps):
@@ -104,7 +104,7 @@ def main():
 
         # Looping until something breaks
         while not done:
-            action = robot.act(state)
+            action = MLAgent.act(state)
             next_state, reward, done = env.step(action)  # Make sure this returns correctly
             rewards.append(reward)
             states.append(state)
@@ -113,7 +113,7 @@ def main():
             total_reward += reward
 
             if done:
-                robot.train(states, rewards, actions)
+                MLAgent.train(states, rewards, actions)
                 print("total reward after {} steps is {}".format(step, total_reward))
 
 

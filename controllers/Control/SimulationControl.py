@@ -13,7 +13,7 @@ import random
 load_dotenv()
 sys.path.append(os.getenv('PYTHONPATH'))
 
-TIME_STEP = 16
+TIME_STEP = 8
 
 supervisor = Supervisor()
 
