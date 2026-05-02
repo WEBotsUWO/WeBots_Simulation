@@ -7,11 +7,12 @@
 from math import sqrt
 import sys, os
 from dotenv import load_dotenv
-from controller import Supervisor
 import random
+from webots_path import configure_webots_python_path
 
 load_dotenv()
-sys.path.append(os.getenv('PYTHONPATH'))
+configure_webots_python_path()
+from controller import Supervisor
 
 TIME_STEP = 16
 

@@ -3,6 +3,7 @@ opencv-python>=4.10      # cv2
 numpy>=1.26
 gymnasium[classic-control]   # replacement for gym
 tensorflow==2.16.1       # includes tf.keras  
-tensorflow-probability>=0.24
+tensorflow-probability==0.24.0
+tf-keras==2.16.0         # required by tensorflow-probability with TensorFlow
 keras==3.0.1             # standalone multi-backend Keras 3
 webots                   # Python controller API for Webots

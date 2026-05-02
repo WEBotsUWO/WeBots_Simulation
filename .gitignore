@@ -124,3 +124,36 @@ dmypy.json
 
 *.wbproj
 *.jpg
+*.png
+
+# Claude / AI tooling
+.claude/
+.tmp/
+
+# Webots auto-saves & backups
+*.wbo
+*.bak
+.Webots/
+
+# Trained ML models / checkpoints
+champion_models/
+*.h5
+*.keras
+*.weights.h5
+*.ckpt
+*.pth
+*.pt
+*.onnx
+checkpoints/
+saved_models/
+
+# TensorBoard / training logs
+logs/
+runs/
+tb_logs/
+tensorboard/
+events.out.tfevents.*
+
+# Captured camera frames / debug images
+captures/
+debug_images/

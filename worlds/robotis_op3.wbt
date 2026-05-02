@@ -15,7 +15,7 @@ WorldInfo {
 }
 Viewpoint {
   orientation -0.11079757951071328 -0.10625919442576057 0.9881461835045235 4.640414044246474
-  position 0.34323653296937784 5.7266946181100185 1.7116168585636422
+  position 0.11294359144125693 1.7076374818980136 0.42286554773575225
   follow "ROBOTIS OP3"
 }
 TexturedBackground {
@@ -386,15 +386,15 @@ DEF WEBOT Robot {
               maxVelocity 100
               minPosition -2.82743338823
               maxPosition 2.82743338823
-              maxTorque 1000
+              maxTorque 130
             }
             PositionSensor {
               name "PelvYLS"
             }
           ]
           endPoint Solid {
-            translation 1.298699149619983e-06 0.034998999998895615 2.880000000000094e-05
-            rotation -0.9496017087526375 0.16744163522328592 0.2649903649716776 4.3753625744873e-06
+            translation 1.2986991496207243e-06 0.034998999998895615 2.880000000000101e-05
+            rotation -0.9496016229381695 0.16744162009176847 0.26499068205172477 4.374956564875282e-06
             children [
               Pose {
                 translation 0 0 0.002
@@ -1027,15 +1027,15 @@ DEF WEBOT Robot {
                     maxVelocity 100
                     minPosition -2.82743338823
                     maxPosition 2.82743338823
-                    maxTorque 1000
+                    maxTorque 130
                   }
                   PositionSensor {
                     name "PelvLS"
                   }
                 ]
                 endPoint Solid {
-                  translation -0.024 -2.3842459567335816e-06 -0.02844119999861959
-                  rotation 0.9850568458807034 0.17050785941179777 -0.024291567721473707 1.2717597659440177e-06
+                  translation -0.024000000000000007 -2.38424595674991e-06 -0.028441199998619507
+                  rotation 0.9850568458916417 0.17050785937071772 -0.024291567566256132 1.2717597659440177e-06
                   children [
                     Pose {
                       translation 0.024 0.017 0
@@ -1238,7 +1238,7 @@ DEF WEBOT Robot {
                           maxVelocity 100
                           minPosition -2.82743338823
                           maxPosition 2.82743338823
-                          maxTorque 1000
+                          maxTorque 130
                         }
                         PositionSensor {
                           name "LegUpperLS"
@@ -1754,7 +1754,7 @@ DEF WEBOT Robot {
                                 maxVelocity 100
                                 minPosition -2.82743338823
                                 maxPosition 2.82743338823
-                                maxTorque 1000
+                                maxTorque 130
                               }
                               PositionSensor {
                                 name "LegLowerLS"
@@ -2479,7 +2479,7 @@ DEF WEBOT Robot {
                                       maxVelocity 100
                                       minPosition -2.82743338823
                                       maxPosition 2.82743338823
-                                      maxTorque 1000
+                                      maxTorque 14.715
                                     }
                                     PositionSensor {
                                       name "AnkleLS"
@@ -2694,7 +2694,7 @@ DEF WEBOT Robot {
                                             maxVelocity 100
                                             minPosition -2.82743338823
                                             maxPosition 2.82743338823
-                                            maxTorque 1000
+                                            maxTorque 14.715
                                           }
                                           PositionSensor {
                                             name "FootLS"
@@ -3122,22 +3122,22 @@ DEF WEBOT Robot {
                                           name "FootLSolid"
                                           contactMaterial "ROBOTIS OP3 foot material"
                                           boundingObject Pose {
-                                            translation 0.024 0.0125 -0.0265
+                                            translation 0.024 0 -0.0265
                                             children [
                                               Box {
-                                                size 0.127 0.08 0.008
+                                                size 0.127 0.04 0.008
                                               }
                                             ]
                                           }
                                           physics Physics {
                                             density -1
-                                            mass 0.06934
+                                            mass 0.7
                                             centerOfMass [
                                               0.02373 0.01037 -0.0276
                                             ]
                                             inertiaMatrix [
-                                              4.034e-05 7.874e-05 0.00011579
-                                              -1.9e-07 1.2e-07 1.01e-06
+                                              0.0004072 0.0007949 0.0011689
+                                              -1.918e-06 1.211e-06 1.02e-05
                                             ]
                                           }
                                         }
@@ -3155,13 +3155,13 @@ DEF WEBOT Robot {
                                     }
                                     physics Physics {
                                       density -1
-                                      mass 0.17886
+                                      mass 0.6
                                       centerOfMass [
                                         -0.02022 -0.01872 0.01214
                                       ]
                                       inertiaMatrix [
-                                        4.661e-05 0.00012523 0.00010857
-                                        -1.01e-06 1.31e-06 6e-08
+                                        0.0001563 0.0004201 0.0003642
+                                        -3.388e-06 4.395e-06 2.013e-07
                                       ]
                                     }
                                   }
@@ -3179,12 +3179,12 @@ DEF WEBOT Robot {
                               }
                               physics Physics {
                                 density -1
-                                mass 0.04015
+                                mass 0.7
                                 centerOfMass [
                                   0 -0.02151 -0.055
                                 ]
                                 inertiaMatrix [
-                                  3.715e-05 2.751e-05 1.511e-05
+                                  0.0006477 0.0004797 0.0002634
                                   0 0 0
                                 ]
                               }
@@ -3203,13 +3203,13 @@ DEF WEBOT Robot {
                         }
                         physics Physics {
                           density -1
-                          mass 0.11543
+                          mass 0.5
                           centerOfMass [
                             0.00059 -0.01901 -0.08408
                           ]
                           inertiaMatrix [
-                            0.00010499 9.613e-05 2.493e-05
-                            -1e-08 -7.1e-07 3.53e-06
+                            0.0004548 0.0004164 0.000108
+                            -4.33e-08 -3.075e-06 1.529e-05
                           ]
                         }
                       }
@@ -3227,13 +3227,13 @@ DEF WEBOT Robot {
                   }
                   physics Physics {
                     density -1
-                    mass 0.17886
+                    mass 0.45
                     centerOfMass [
                       0.00388 0.00028 -0.01214
                     ]
                     inertiaMatrix [
-                      4.661e-05 0.00012523 0.00010857
-                      -1.01e-06 -1.31e-06 -6e-08
+                      0.0001173 0.0003151 0.0002732
+                      -2.541e-06 -3.296e-06 -1.51e-07
                     ]
                   }
                 }
@@ -3251,13 +3251,13 @@ DEF WEBOT Robot {
             }
             physics Physics {
               density -1
-              mass 0.01181
+              mass 0.35
               centerOfMass [
                 -0.00157 0 -0.00774
               ]
               inertiaMatrix [
-                1.51e-06 4.3e-06 4.12e-06
-                0 1e-08 0
+                4.475e-05 0.0001274 0.0001221
+                0 2.964e-07 0
               ]
             }
           }
@@ -3275,15 +3275,15 @@ DEF WEBOT Robot {
               maxVelocity 100
               minPosition -2.82743338823
               maxPosition 2.82743
-              maxTorque 1000
+              maxTorque 130
             }
             PositionSensor {
               name "PelvYRS"
             }
           ]
           endPoint Solid {
-            translation 1.1210799999859413e-08 -0.035000000000002196 1.6248700000000057e-05
-            rotation -0.9262540289752174 0.12310931423067724 0.3562268526610954 1.1834937126436873e-06
+            translation 1.1210800004593838e-08 -0.03500000000000219 1.6248700000054402e-05
+            rotation -0.9262125556844835 0.12310380197518997 0.3563365763315223 1.183118417339295e-06
             children [
               Pose {
                 translation 0 -4.89665e-14 0.002
@@ -3916,14 +3916,14 @@ DEF WEBOT Robot {
                     maxVelocity 100
                     minPosition -2.82743338823
                     maxPosition 2.82743338823
-                    maxTorque 1000
+                    maxTorque 130
                   }
                   PositionSensor {
                     name "PelvRS"
                   }
                 ]
                 endPoint Solid {
-                  translation -0.024 3.1464315017889147e-15 -0.0285
+                  translation -0.024 3.145732745607513e-15 -0.0285
                   rotation -1 0 0 3.964941112890867e-07
                   children [
                     Pose {
@@ -4127,7 +4127,7 @@ DEF WEBOT Robot {
                           maxVelocity 100
                           minPosition -2.82743338823
                           maxPosition 2.82743338823
-                          maxTorque 1000
+                          maxTorque 130
                         }
                         PositionSensor {
                           name "LegUpperRS"
@@ -4645,7 +4645,7 @@ DEF WEBOT Robot {
                                 maxVelocity 100
                                 minPosition -2.82743338823
                                 maxPosition 2.82743338823
-                                maxTorque 1000
+                                maxTorque 130
                               }
                               PositionSensor {
                                 name "LegLowerRS"
@@ -5372,7 +5372,7 @@ DEF WEBOT Robot {
                                       maxVelocity 100
                                       minPosition -2.82743338823
                                       maxPosition 2.82743338823
-                                      maxTorque 1000
+                                      maxTorque 14.715
                                     }
                                     PositionSensor {
                                       name "AnkleRS"
@@ -5588,7 +5588,7 @@ DEF WEBOT Robot {
                                             maxVelocity 100
                                             minPosition -2.82743338823
                                             maxPosition 2.82743338823
-                                            maxTorque 1000
+                                            maxTorque 14.715
                                           }
                                           PositionSensor {
                                             name "FootRS"
@@ -6016,22 +6016,22 @@ DEF WEBOT Robot {
                                           name "FootRSolid"
                                           contactMaterial "ROBOTIS OP3 foot material"
                                           boundingObject Pose {
-                                            translation 0.024 -0.0125 -0.0265
+                                            translation 0.024 0 -0.0265
                                             children [
                                               Box {
-                                                size 0.127 0.08 0.008
+                                                size 0.127 0.04 0.008
                                               }
                                             ]
                                           }
                                           physics Physics {
                                             density -1
-                                            mass 0.06934
+                                            mass 0.7
                                             centerOfMass [
                                               0.02373 -0.01037 -0.0276
                                             ]
                                             inertiaMatrix [
-                                              4.034e-05 7.874e-05 0.00011579
-                                              1.9e-07 1.2e-07 -1.01e-06
+                                              0.0004072 0.0007949 0.0011689
+                                              1.918e-06 1.211e-06 -1.02e-05
                                             ]
                                           }
                                         }
@@ -6049,13 +6049,13 @@ DEF WEBOT Robot {
                                     }
                                     physics Physics {
                                       density -1
-                                      mass 0.17886
+                                      mass 0.6
                                       centerOfMass [
                                         -0.02022 0.01872 0.01214
                                       ]
                                       inertiaMatrix [
-                                        4.661e-05 0.00012523 0.00010857
-                                        1.01e-06 1.31e-06 -6e-08
+                                        0.0001563 0.0004201 0.0003642
+                                        3.388e-06 4.395e-06 -2.013e-07
                                       ]
                                     }
                                   }
@@ -6073,12 +6073,12 @@ DEF WEBOT Robot {
                               }
                               physics Physics {
                                 density -1
-                                mass 0.04015
+                                mass 0.7
                                 centerOfMass [
                                   0 0.02151 -0.055
                                 ]
                                 inertiaMatrix [
-                                  3.715e-05 2.751e-05 1.511e-05
+                                  0.0006477 0.0004797 0.0002634
                                   0 0 0
                                 ]
                               }
@@ -6097,13 +6097,13 @@ DEF WEBOT Robot {
                         }
                         physics Physics {
                           density -1
-                          mass 0.11543
+                          mass 0.5
                           centerOfMass [
                             0.00059 0.01901 -0.08408
                           ]
                           inertiaMatrix [
-                            0.00010499 9.613e-05 2.493e-05
-                            1e-08 -7.1e-07 -3.53e-06
+                            0.0004548 0.0004164 0.000108
+                            4.33e-08 -3.075e-06 -1.529e-05
                           ]
                         }
                       }
@@ -6121,13 +6121,13 @@ DEF WEBOT Robot {
                   }
                   physics Physics {
                     density -1
-                    mass 0.17886
+                    mass 0.45
                     centerOfMass [
                       0.00388 -0.00028 -0.01214
                     ]
                     inertiaMatrix [
-                      4.661e-05 0.00012523 0.00010857
-                      1.01e-06 -1.31e-06 6e-08
+                      0.0001173 0.0003151 0.0002732
+                      2.541e-06 -3.296e-06 1.51e-07
                     ]
                   }
                 }
@@ -6145,13 +6145,13 @@ DEF WEBOT Robot {
             }
             physics Physics {
               density -1
-              mass 0.01181
+              mass 0.35
               centerOfMass [
                 -0.00157 0 -0.00774
               ]
               inertiaMatrix [
-                1.51e-06 4.3e-06 4.12e-06
-                0 1e-08 0
+                4.475e-05 0.0001274 0.0001221
+                0 2.964e-07 0
               ]
             }
           }
@@ -7076,13 +7076,13 @@ DEF WEBOT Robot {
                   }
                   physics Physics {
                     density -1
-                    mass 0.13631
+                    mass 0.3
                     centerOfMass [
                       0.0023 -0.01863 0.0277
                     ]
                     inertiaMatrix [
-                      0.00010612 8.721e-05 4.529e-05
-                      1.1e-07 -9.1e-06 8.4e-07
+                      0.0002336 0.0001919 9.969e-05
+                      2.421e-07 -2.003e-05 1.849e-06
                     ]
                   }
                 }
@@ -7100,13 +7100,13 @@ DEF WEBOT Robot {
             }
             physics Physics {
               density -1
-              mass 0.01176
+              mass 0.1
               centerOfMass [
                 0.00233 0 0.00823
               ]
               inertiaMatrix [
-                3.97e-06 1.65e-06 3.87e-06
-                0 -3.1e-07 0
+                3.376e-05 1.403e-05 3.291e-05
+                0 -2.636e-06 0
               ]
             }
           }
@@ -7144,13 +7144,13 @@ DEF WEBOT Robot {
       }
       physics Physics {
         density -1
-        mass 1.34928
+        mass 2.5
         centerOfMass [
           -0.01501 0.00013 0.06582
         ]
         inertiaMatrix [
-          0.00340499 0.00296939 0.00317331
-          5.72e-06 -4.256e-05 -5.9e-07
+          0.006308 0.005501 0.005879
+          1.06e-05 -7.886e-05 -1.093e-06
         ]
       }
     }

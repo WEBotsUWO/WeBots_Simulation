@@ -15,11 +15,10 @@ from abc import ABC
 from typing import Optional
 import sys
 from dotenv import load_dotenv
+from webots_path import configure_webots_python_path
 
 load_dotenv()
-
-
-sys.path.append(os.getenv('PYTHONPATH'))
+configure_webots_python_path()
 import cv2
 import gymnasium as gym
 import numpy as np
@@ -85,20 +84,26 @@ class CustomEnv(gym.Env, ABC):
         self._cpg_on_until = 0.0
         self._prev_action = None
 
-        # Joint limits based on human anatomy
+        # Joint limits: (range_window_deg, max_vel_deg_per_s, max_torque_Nm)
+        # CONTINUOUS ratings - what real hardware sustains without overheat/brownout.
+        # Stall is 3-4x higher but only millisecond bursts (e.g. BLDC stall=100A).
+        # Hip + knee: BLDC 0.97 Nm stall x 1:50 gearbox @ 70% eff, continuous ~25%
+        #             -> 8.5 Nm continuous, ~400 deg/s loaded speed
+        # Ankle/foot: 2x 150 kg-cm servos, continuous ~50% of rated stall
+        #             -> 15 Nm, ~250 deg/s loaded
         JOINT_LIMITS = {
-            "PelvR"   :  ( 30,       120,      6.0 ),
-            "PelvYR"  :  ( 40,        80,      4.0 ),
-            "LegUpperR": ( 90,       100,      8.0 ),
-            "PelvL"   :  ( 30,       120,      6.0 ),
-            "PelvYL"  :  ( 40,        80,      4.0 ),
-            "LegUpperL": ( 90,       100,      8.0 ),
-            "LegLowerR": ( 70,       120,      5.0 ),
-            "LegLowerL": ( 70,       120,      5.0 ),
-            "AnkleR"  :  ( 30,       150,      3.0 ),
-            "FootR"   :  ( 20,       150,      2.5 ),
-            "AnkleL"  :  ( 30,       150,      3.0 ),
-            "FootL"   :  ( 20,       150,      2.5 )
+            "PelvR"   :  ( 30,       400,      8.5 ),
+            "PelvYR"  :  ( 40,       400,      8.5 ),
+            "LegUpperR": ( 90,       400,      8.5 ),
+            "PelvL"   :  ( 30,       400,      8.5 ),
+            "PelvYL"  :  ( 40,       400,      8.5 ),
+            "LegUpperL": ( 90,       400,      8.5 ),
+            "LegLowerR": ( 70,       400,      8.5 ),
+            "LegLowerL": ( 70,       400,      8.5 ),
+            "AnkleR"  :  ( 30,       250,     14.7 ),
+            "FootR"   :  ( 20,       250,     14.7 ),
+            "AnkleL"  :  ( 30,       250,     14.7 ),
+            "FootL"   :  ( 20,       250,     14.7 )
         }
 
         # Instance identification
@@ -153,7 +158,9 @@ class CustomEnv(gym.Env, ABC):
         
 
 
-        self.start_pos = [0.0, 0.0, 0.285]
+        # Match wbt: translation [0,0,0.2782], rotation [0,0,1,1.5708] (pi/2 yaw)
+        self.start_pos = [0.0, 0.0, 0.2782]
+        self.start_rot = [0.0, 0.0, 1.0, 1.5707963267948966]
 
         self.max_step = 10000000
         self.cur_step = 0
@@ -163,21 +170,8 @@ class CustomEnv(gym.Env, ABC):
         self.height_threshold = 0.09
         self.min_walking_speed = 0.01
 
-        # Initial standing positions for joint reset
-        self.initial_standing_positions = [
-            0.0,   # PelvR
-            0.0,   # PelvYR
-            0.0,   # LegUpperR
-            0.0,   # PelvL
-            0.0,   # PelvYL
-            0.0,   # LegUpperL
-            0.0,   # LegLowerR
-            0.0,   # LegLowerL
-            0.0,   # AnkleR
-            0.0,   # FootR
-            0.0,   # AnkleL
-            0.0    # FootL
-        ]
+        # Initial standing positions for joint reset - matches wbt modeled pose (all 0)
+        self.initial_standing_positions = [0.0] * 12
         
         self.actual_start_positions = None
         
@@ -277,6 +271,68 @@ class CustomEnv(gym.Env, ABC):
             sensor.enable(self.timestep)
             self.joint_sensors.append(sensor)
 
+        # Cache HingeJoint nodes per motor for instant joint resets via setJointPosition
+        # Use tree walk - match HingeJoint by inspecting its device field for motor name
+        self.joint_nodes = []
+        joint_types = ("HingeJoint", "Hinge2Joint", "BallJoint", "SliderJoint")
+        print("\n=== CACHING JOINT NODES (tree walk) ===")
+
+        def _walk_for_joint(root, motor_name):
+            """BFS through scene tree, return HingeJoint whose device contains motor_name."""
+            queue = [root]
+            visited = 0
+            while queue and visited < 5000:
+                node = queue.pop(0)
+                visited += 1
+                if node is None:
+                    continue
+                try:
+                    tname = node.getTypeName()
+                except Exception:
+                    continue
+                if tname in joint_types:
+                    # Check device field for matching motor name
+                    try:
+                        dev_f = node.getField("device")
+                        if dev_f is not None:
+                            for i in range(dev_f.getCount()):
+                                dn = dev_f.getMFNode(i)
+                                if dn is None:
+                                    continue
+                                nf = dn.getField("name")
+                                if nf is not None and nf.getSFString() == motor_name:
+                                    return node
+                    except Exception:
+                        pass
+                # Enqueue children
+                try:
+                    cf = node.getField("children")
+                    if cf is not None:
+                        for i in range(cf.getCount()):
+                            queue.append(cf.getMFNode(i))
+                except Exception:
+                    pass
+                # Enqueue endPoint (for joints)
+                try:
+                    ef = node.getField("endPoint")
+                    if ef is not None:
+                        queue.append(ef.getSFNode())
+                except Exception:
+                    pass
+            return None
+
+        # Fallback root: scene tree root if robot_node None
+        search_root = self.robot_node if self.robot_node is not None else self.robot.getRoot()
+        print(f"  Searching from: {search_root.getTypeName() if search_root else 'NONE'}")
+        for m in self.motor_devices:
+            mname = m.getName()
+            jnode = _walk_for_joint(search_root, mname)
+            if jnode is not None:
+                print(f"  {mname:12}: found {jnode.getTypeName()}")
+            else:
+                print(f"  {mname:12}: NOT FOUND - reset will be incomplete")
+            self.joint_nodes.append(jnode)
+
         deg2rad = np.deg2rad
 
         # Capture robot’s *current* pose
@@ -288,10 +344,14 @@ class CustomEnv(gym.Env, ABC):
         self._vmax_rad = np.array([np.deg2rad(JOINT_LIMITS[m.getName()][1]) for m in self.motor_devices], dtype=np.float64)
         self._tmax_nm  = np.array([JOINT_LIMITS[m.getName()][2] for m in self.motor_devices], dtype=np.float64)
 
+        # Stay in POSITION control mode (Webots default).
+        # setVelocity/setTorque act as caps in position mode.
+        # NEVER call setPosition(inf) - that switches to velocity mode and
+        # joints will spin freely accumulating thousands of radians.
         for m, v_lim, t_lim in zip(self.motor_devices, self._vmax_rad, self._tmax_nm):
-            m.setPosition(float('inf'))   # velocity-control mode
-            m.setVelocity(float(v_lim))   # cap
-            m.setTorque(float(t_lim))     # cap
+            m.setPosition(0.0)            # position mode, target 0
+            m.setVelocity(float(v_lim))   # max velocity cap
+            m.setTorque(float(t_lim))     # max torque cap
 
         # never exceed Webots hard limits
         # build “soft” range around current pose, then clamp to Webots hard limits
@@ -345,6 +405,10 @@ class CustomEnv(gym.Env, ABC):
         self.current_action = np.zeros(self.motor_num)
         self.action_lock = threading.Lock()
         self.buffer_lock = threading.Lock()
+        self.reset_lock = threading.Lock()
+        self._pending_reset = False
+        self._reset_done_event = threading.Event()
+        self._stabilize_until = 0.0  # while time<this, sim thread holds standing pose
         self.ml_thread = None
         self.running = True
         
@@ -555,6 +619,13 @@ class CustomEnv(gym.Env, ABC):
         
         while self.running:
             try:
+                # Handle any pending reset request from other threads
+                if self._pending_reset:
+                    with self.reset_lock:
+                        self._pending_reset = False
+                    self._do_reset_in_sim_thread()
+                    continue
+
                 # Safety check - detect if simulation is paused
                 if not self.check_simulation_health():
                     print("Simulation paused - waiting...")
@@ -569,11 +640,11 @@ class CustomEnv(gym.Env, ABC):
                 if time.time() < self._cpg_on_until:
                     tsec = time.time() - self.start_time
                     action = self._cpg_action(tsec)
-                
-                # Get current action thread-safely
-                with self.action_lock:
-                    action = self.current_action.copy()
-                
+
+                # Stabilization grace period after reset - hold standing pose
+                if time.time() < self._stabilize_until:
+                    action = np.array(self.initial_standing_positions, dtype=np.float64)
+
                 # Apply action and step simulation
                 self.setAction(action)
                 
@@ -599,10 +670,23 @@ class CustomEnv(gym.Env, ABC):
                     
                     if fallen:
                         print(f"[{self.instance_id}] Robot fell - resetting...")
-                        self.reset_simulation_state()
+                        # Already in sim thread - reset directly to avoid self-deadlock
+                        self._do_reset_in_sim_thread()
+                        self.cur_step = 0
+                        self.episode_count += 1
+                        with self.buffer_lock:
+                            self.buffer.clear()
+                            for _ in range(self.obs_num):
+                                self.buffer.append(self.observe())
                     elif collision:
                         print(f"[{self.instance_id}] Collision detected - resetting...")
-                        self.reset_simulation_state()
+                        self._do_reset_in_sim_thread()
+                        self.cur_step = 0
+                        self.episode_count += 1
+                        with self.buffer_lock:
+                            self.buffer.clear()
+                            for _ in range(self.obs_num):
+                                self.buffer.append(self.observe())
                 
                 # Auto-save progress periodically
                 if self.should_save_model():
@@ -634,84 +718,152 @@ class CustomEnv(gym.Env, ABC):
     # =============================================================================
     
     def reset_simulation_state(self):
-        """Reset robot to exact upright position from simulation start"""
+        """Request reset from any thread - actual reset runs in sim thread for safety."""
         try:
-            print("Resetting robot to captured upright position...")
-            
-            # Method 1: Complete physics reset using Supervisor API
-            if self.robot_node is not None:
-                # Reset position (translation field)
-                translation_field = self.robot_node.getField("translation")
-                if translation_field is not None:
-                    translation_field.setSFVec3f(self.start_pos)
-                    print(f"Set translation to: {self.start_pos}")
-                
-                # Reset orientation to upright (rotation field)
-                rotation_field = self.robot_node.getField("rotation")
-                if rotation_field is not None:
-                    # Reset to upright orientation (no rotation around any axis)
-                    rotation_field.setSFRotation([0, 0, 1, 0])  # [axis_x, axis_y, axis_z, angle]
-                    print("Reset orientation to upright")
-                
-                # Reset physics to clear velocities and forces
-                self.robot_node.resetPhysics()
-                print("Physics reset applied")
-                
-                # Method 2: Skip Supervisor joint reset (nodes not accessible)
-                print("Supervisor joint reset not available - using motor reset instead")
-                joint_reset_success = False
-                
-            else:
-                print("Warning: No robot node reference - using motor reset only")
-                joint_reset_success = False
-                
-            # Method 3: Motor position reset (primary reset method)
-            print("Using reliable motor position commands...")
-            self.log_motor_positions(self.initial_standing_positions, "(RESET TARGETS)")
-            for i, motor in enumerate(self.motor_devices):
-                motor.setPosition(self.initial_standing_positions[i])
-                motor.setVelocity(0.05)  # small settling velocity instead of 0
+            with self.reset_lock:
+                self._reset_done_event.clear()
+                self._pending_reset = True
+            # Wait up to 10s for sim thread to perform reset
+            if not self._reset_done_event.wait(timeout=10.0):
+                print("WARNING: Reset request timed out (sim thread not running?)")
+                # Fall through to direct reset as last resort
+                self._do_reset_in_sim_thread()
 
-            # Step B: let it settle
-            for step in range(15):
-                if step % 5 == 0:
-                    for i, motor in enumerate(self.motor_devices):
-                        motor.setPosition(self.initial_standing_positions[i])
-                self.robot.step(self.timestep)
-
-            # Step C: RESTORE normal caps so actions move joints again
-            self._apply_motor_caps()
-            
-            # Verify standing position was applied correctly
-            print("\n=== CHECKING RESET RESULTS ===")
-            current_positions = [sensor.getValue() for sensor in self.joint_sensors]
-            self.log_motor_positions(current_positions, "(AFTER RESET)")
-            self.verify_standing_position()
-            
-            # Update position tracking
-            self.position = self.start_pos.copy()
-            
-            # Reset step counter for this episode
+            # Post-reset bookkeeping (no Supervisor mutations)
             self.cur_step = 0
             self.cancel_sim = False
-            self.episode_count += 1  # Track episodes
-            
-            # Teleport boxes to new random locations
-            self.teleport_boxes()
-            
-            # Clear buffer safely
+            self.episode_count += 1
             with self.buffer_lock:
                 self.buffer.clear()
-                # Refill buffer with current observation
                 obs = self.observe()
                 for _ in range(self.obs_num):
                     self.buffer.append(obs)
-            
             print(f"Episode {self.episode_count} started - Simulation state reset complete")
         except Exception as e:
             print(f"Reset error: {e}")
             import traceback
             traceback.print_exc()
+
+    def _do_reset_in_sim_thread(self):
+        """Authoritative reset - MUST run in the thread that owns robot.step().
+
+        Pauses simulation during state mutation so no physics step runs with
+        inconsistent state (body teleported but joints not yet snapped).
+        Sequence:
+          PAUSE -> setTranslation/Rotation -> setJointPosition -> resetPhysics
+          -> setPosition motor targets -> RESUME -> single step -> snap again
+          -> settle steps
+        """
+        try:
+            print("\n=== SIM-THREAD RESET (direct manipulation) ===")
+
+            # Pause simulation so state mutations don't race physics ticks
+            try:
+                self.robot.simulationSetMode(self.robot.SIMULATION_MODE_PAUSE)
+            except Exception as e:
+                print(f"  pause failed: {e}")
+
+            def _snap_joints():
+                count = 0
+                for i, (jnode, tgt) in enumerate(zip(self.joint_nodes, self.initial_standing_positions)):
+                    if jnode is None:
+                        continue
+                    snapped = False
+                    for idx in (1, 0):
+                        try:
+                            jnode.setJointPosition(float(tgt), idx)
+                            snapped = True
+                            break
+                        except Exception:
+                            continue
+                    if not snapped:
+                        try:
+                            jnode.setJointPosition(float(tgt))
+                            snapped = True
+                        except Exception:
+                            pass
+                    if snapped:
+                        count += 1
+                return count
+
+            # 1. Teleport torso to lifted standing pose
+            lift_z = self.start_pos[2] + 0.20  # generous lift so body never reaches ground during reset
+            if self.robot_node is not None:
+                lift_pos = [self.start_pos[0], self.start_pos[1], lift_z]
+                tf = self.robot_node.getField("translation")
+                if tf is not None:
+                    tf.setSFVec3f(lift_pos)
+                rf = self.robot_node.getField("rotation")
+                if rf is not None:
+                    rf.setSFRotation(self.start_rot)
+
+            # 2. Snap joints
+            n1 = _snap_joints()
+            print(f"Pre-step snap: {n1}/12 joints")
+
+            # 3. Reset physics on robot + all child solids (clears velocities everywhere)
+            if self.robot_node is not None:
+                self.robot_node.resetPhysics()
+
+            # 4. Motor caps + position targets BEFORE unpausing
+            self._apply_motor_caps()
+            self._prev_action = None
+            self._stall_steps = 0
+            self._cpg_on_until = 0.0
+            for i, motor in enumerate(self.motor_devices):
+                motor.setPosition(float(self.initial_standing_positions[i]))
+
+            standing = np.array(self.initial_standing_positions, dtype=np.float64)
+            with self.action_lock:
+                self.current_action = standing.copy()
+            # Short stabilize, then long CPG bootstrap to drive legs before NN takes over
+            now = time.time()
+            self._stabilize_until = now + 0.5
+            self._cpg_on_until = now + 30.5  # 0.5s stabilize + 30s CPG walking
+
+            # 5. Resume simulation in FAST mode
+            try:
+                self.robot.simulationSetMode(self.robot.SIMULATION_MODE_FAST)
+            except Exception as e:
+                print(f"  resume failed: {e}")
+
+            # 6. Step once to commit pose, then snap AGAIN (fights any drift)
+            self.robot.step(self.timestep)
+            n2 = _snap_joints()
+            self.robot.step(self.timestep)
+
+            # Verify
+            actual = [s.getValue() for s in self.joint_sensors]
+            max_err = max(abs(t - a) for t, a in zip(self.initial_standing_positions, actual))
+            print(f"Post-snap verify: max error = {max_err:.4f} rad ({np.rad2deg(max_err):.2f} deg) [snap2={n2}/12]")
+            if max_err > 0.1:
+                self.log_motor_positions(actual, "(POST-SNAP ACTUAL)")
+
+            if self.robot_node is not None:
+                tf = self.robot_node.getField("translation")
+                if tf is not None:
+                    print(f"Body translation post-reset: {tf.getSFVec3f()}")
+
+            # 7. Settle to ground contact (motors holding standing pose)
+            for _ in range(40):
+                self.robot.step(self.timestep)
+
+            self.position = list(self.gps.getValues())
+            print(f"GPS height post-settle: {self.position[2]:.3f} m")
+            self.teleport_boxes()
+
+            print("=== RESET COMPLETE ===\n")
+        except Exception as e:
+            print(f"Sim-thread reset error: {e}")
+            import traceback
+            traceback.print_exc()
+            # Ensure sim is unpaused even on error
+            try:
+                self.robot.simulationSetMode(self.robot.SIMULATION_MODE_FAST)
+            except Exception:
+                pass
+        finally:
+            self._reset_done_event.set()
 
 
 
@@ -720,40 +872,58 @@ class CustomEnv(gym.Env, ABC):
     # =============================================================================
     
     def _cpg_action(self, t):
-        """Simple symmetric gait around standing pose in radians, output in [-1,1] then scaled."""
-        # base = self.initial_standing_positions (radians)
+        """Walking CPG with lateral weight shift.
+
+        Phases:
+          - Lateral pelvis sway shifts CoM over stance foot
+          - Swing-leg knee flexes when its hip is forward (foot clears ground)
+          - Hips alternate sagittally for stride
+          - Ankles counter-rotate for foot placement
+        """
         base = np.array(self.initial_standing_positions, dtype=np.float64)
 
-        # amplitudes (radians): modest swings
-        A_hip   = 0.20
-        A_knee  = 0.25
-        A_ankle = 0.10
+        # Amplitudes (rad)
+        A_lean  = 0.12   # lateral pelvis sway (weight shift)
+        A_hip   = 0.25   # sagittal hip swing (stride)
+        A_knee  = 0.45   # knee flex (foot clearance)
+        A_ankle = 0.08   # ankle pitch (push-off / placement)
 
-        # frequency (Hz) and phase offsets
-        f   = 0.9
+        # Slower frequency for stability
+        f   = 0.6
         w   = 2*np.pi*f
-        ph  = 0.0
         phL = 0.0
-        phR = np.pi  # out of phase
+        phR = np.pi  # legs out of phase
 
-        # indices for readability
+        # Joint indices (per motor_devices_name order)
         PelvR, PelvYR, HipR, PelvL, PelvYL, HipL, KneeR, KneeL, AnkleR, FootR, AnkleL, FootL = range(12)
         act = base.copy()
 
-        # Hips
-        act[HipL]  = base[HipL]  + A_hip  * np.sin(w*t + phL)
-        act[HipR]  = base[HipR]  + A_hip  * np.sin(w*t + phR)
-        # Knees (lead hips by 90°)
-        act[KneeL] = base[KneeL] + A_knee * np.sin(w*t + phL + np.pi/2)
-        act[KneeR] = base[KneeR] + A_knee * np.sin(w*t + phR + np.pi/2)
-        # Ankles (counter knees slightly)
-        act[AnkleL]= base[AnkleL]+ A_ankle* np.sin(w*t + phL - np.pi/2)
-        act[AnkleR]= base[AnkleR]+ A_ankle* np.sin(w*t + phR - np.pi/2)
+        # Lateral lean: both pelvis abduction joints swing TOGETHER (same direction)
+        # to shift body weight side-to-side. Phase aligned with right-leg swing.
+        lean = A_lean * np.sin(w*t)
+        act[PelvR] = base[PelvR] + lean
+        act[PelvL] = base[PelvL] + lean
+
+        # Sagittal hips: alternate forward/back
+        act[HipL] = base[HipL] + A_hip * np.sin(w*t + phL)
+        act[HipR] = base[HipR] + A_hip * np.sin(w*t + phR)
+
+        # Knees: flex during swing phase (lift foot off ground)
+        # Negative sign because OP3 knee convention: -ve = flex (bend backward at knee)
+        # Rectified sine: only flexes during swing, never hyperextends
+        swingL = max(0.0, np.sin(w*t + phL + np.pi/2))
+        swingR = max(0.0, np.sin(w*t + phR + np.pi/2))
+        act[KneeL] = base[KneeL] - A_knee * swingL
+        act[KneeR] = base[KneeR] - A_knee * swingR
+
+        # Ankles counter-rotate to keep foot flat during swing (also flipped sign)
+        act[AnkleL] = base[AnkleL] - A_ankle * np.sin(w*t + phL - np.pi/2)
+        act[AnkleR] = base[AnkleR] - A_ankle * np.sin(w*t + phR - np.pi/2)
 
         # Clamp to soft limits
         act = np.clip(act, self._soft_min, self._soft_max)
 
-        # Convert from absolute rad targets to normalized [-1,1] for setAction scaling path
+        # Normalize to [-1,1] for setAction scaling path
         norm = 2.0*(act - self._soft_min)/(self._soft_max - self._soft_min) - 1.0
         return norm
     
@@ -810,20 +980,8 @@ class CustomEnv(gym.Env, ABC):
             
             # Define stable standing positions - closer to straight legs for stability
             # These should be very stable positions for a humanoid robot
-            neutral_positions = [
-                0.0,    # PelvR - no hip abduction
-                0.0,    # PelvYR - no hip rotation  
-                0.0,    # LegUpperR - straight hip
-                0.0,    # PelvL - no hip abduction
-                0.0,    # PelvYL - no hip rotation
-                0.0,    # LegUpperL - straight hip
-                0.1,    # LegLowerR - very slight knee flexion for stability
-                0.1,    # LegLowerL - very slight knee flexion for stability
-                0.0,    # AnkleR - neutral ankle
-                0.0,    # FootR - neutral foot
-                0.0,    # AnkleL - neutral ankle
-                0.0     # FootL - neutral foot
-            ]
+            # Match wbt modeled pose - all joints at 0 rad (straight upright)
+            neutral_positions = [0.0] * 12
             
             # Ensure all positions are within motor limits
             max_limit = 2.8  # Slightly under the 2.82743 limit for safety
@@ -838,8 +996,10 @@ class CustomEnv(gym.Env, ABC):
             print("Applying neutral standing positions...")
             for i, motor in enumerate(self.motor_devices):
                 motor.setPosition(safe_positions[i])
-                motor.setVelocity(0.0)
-            
+            # Restore proper velocity/torque caps - DO NOT set velocity to 0
+            # (zero cap permanently freezes motors against gravity)
+            self._apply_motor_caps()
+
             # Let the robot settle into position
             print("Allowing robot to settle into neutral position...")
             for _ in range(20):
@@ -875,11 +1035,18 @@ class CustomEnv(gym.Env, ABC):
             self.initial_standing_positions = neutral_positions.copy()
             
             self.log_motor_positions(self.initial_standing_positions, "(STABLE STANDING REFERENCE)")
-            
+
+            # Final cap restore - guarantees motors can move regardless of prior state
+            self._apply_motor_caps()
+
+            # Initial stabilization grace - hold standing pose for first 2s of training
+            self._stabilize_until = time.time() + 2.0
+
         except Exception as e:
             print(f"Error: Could not capture initial positions: {e}")
             print("Using default neutral positions for reset")
             self.initial_standing_positions = [0.0] * 12
+            self._apply_motor_caps()
     
     # ML sampling loop - runs in background thread
     # =============================================================================
@@ -1218,14 +1385,11 @@ class CustomEnv(gym.Env, ABC):
     # =============================================================================
     
     def convertImage(self, raw_image):
-        w, h = self.cam.getWidth(), self.cam.getHeight()    
-        gray = np.empty((h, w), dtype=np.float64)
-
-        for y in range(h):
-            for x in range(w):
-                gray[y, x] = Camera.imageGetGray(raw_image, w, x, y) / 255.0
-
-        return gray[..., None]    # (H, W, 1)
+        w, h = self.cam.getWidth(), self.cam.getHeight()
+        bgra = np.frombuffer(raw_image, dtype=np.uint8).reshape(h, w, 4)
+        # BT.601 luma from BGRA channels
+        gray = (0.114 * bgra[..., 0] + 0.587 * bgra[..., 1] + 0.299 * bgra[..., 2]) / 255.0
+        return gray.astype(np.float64)[..., None]   # (H, W, 1)
 
     def _clamp_cube_planar(self, node, z0):
         # lock Z translation on the node itself
